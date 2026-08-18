@@ -2123,7 +2123,12 @@ body {
 }
 
 .hinweis__box {
-  width: min(23rem, 100%);
+  width: min(26rem, 100%);
+  /* Seit die Neuigkeiten mit drinstehen, kann das Feld höher werden als ein
+     liegendes Handy. Ohne diese zwei Zeilen schnitte das zentrierte Raster oben
+     und unten ab — und abgeschnitten wären zuerst die Knöpfe. */
+  max-height: calc(100dvh - 2rem);
+  overflow-y: auto;
   display: grid;
   gap: 0.7rem;
   padding: 1.2rem;
@@ -2143,11 +2148,60 @@ body {
   color: var(--ink-soft);
 }
 
+/* Die Neuigkeiten sind die Zugabe, nicht der Anlass: abgesetzt durch eine
+   Linie und eine Spur kleiner als die Frage darüber. */
+.hinweis__neu {
+  display: grid;
+  gap: 0.5rem;
+  padding-top: 0.8rem;
+  border-top: 1px solid var(--line);
+  font-size: 0.92rem;
+}
+
+.hinweis__neu-titel {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.hinweis__liste {
+  margin: 0;
+  padding-left: 1.1rem;
+  display: grid;
+  gap: 0.45rem;
+}
+
+.hinweis__neu .hinweis__text {
+  font-size: 0.85rem;
+}
+
+/* Der Konto-Weg steht mitten im Satz — als Fliesstext-Link, nicht als Zeile
+   mit eigener Höhe wie sonst überall. */
+.hinweis__neu .linkbutton {
+  padding: 0;
+  font-size: inherit;
+  text-decoration: underline;
+}
+
 .hinweis__aktionen {
+  /* Klebt am unteren Rand, sobald das Feld scrollt (liegendes Handy): Die
+     Knöpfe sind der Ausweg aus dem Overlay und dürfen nicht als Einzige unter
+     der Kante liegen. Ohne Überlauf tut die Regel nichts. Die negativen Werte
+     heben die Polsterung der Box auf, damit nichts darunter durchscrollt. */
+  position: sticky;
+  bottom: -1.2rem;
   display: flex;
   flex-wrap: wrap;
   gap: 0.5rem;
   margin-top: 0.2rem;
+  margin-bottom: -1.2rem;
+  /* Oben mit Polster: Sonst klebte der durchscrollende Text an den Knöpfen. */
+  padding-top: 0.5rem;
+  padding-bottom: 1.2rem;
+  background: var(--surface);
 }
 
 @media (prefers-reduced-motion: no-preference) {

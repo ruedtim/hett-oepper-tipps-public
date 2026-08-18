@@ -836,12 +836,13 @@ export default function App() {
         </footer>
       )}
 
-      {/* Dieselbe Einladung einmalig als Overlay — der Hinweis merkt sich
-          selbst, dass er dran war. Nur auf der Liste: Wer über einen geteilten
-          Tipp-Link hereinkommt, soll nicht als Erstes ein Overlay über dem Tipp
-          sehen, und weil der Merker erst beim ZEIGEN gesetzt wird, geht dabei
-          nichts verloren — er wartet einfach, bis jemand auf der Liste landet. */}
-      {me?.signalChat && <SignalHinweis url={me.signalChat} />}
+      {/* Dieselbe Einladung einmalig als Overlay, samt der kurzen Liste dessen,
+          was neu ist — der Hinweis merkt sich selbst, dass er dran war. Nur auf
+          der Liste: Wer über einen geteilten Tipp-Link hereinkommt, soll nicht
+          als Erstes ein Overlay über dem Tipp sehen, und weil der Merker erst
+          beim ZEIGEN gesetzt wird, geht dabei nichts verloren — er wartet
+          einfach, bis jemand auf der Liste landet. */}
+      {me?.signalChat && <SignalHinweis url={me.signalChat} onKonto={() => navigate('/konto')} />}
     </main>
   );
 }

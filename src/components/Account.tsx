@@ -549,8 +549,7 @@ export default function Account({ me, onClose, onChanged, onVerlauf, onKategorie
           <h2 className="form__title">Deine Daten</h2>
           <p className="form__context">
             Alles, was dir gehört, in einer ZIP-Datei: dein Konto, deine Beschreibungen
-            samt der Tipps, zu denen sie gehören, deine Wünsche und deine Fotos in voller
-            Auflösung. Die Beiträge der anderen sind nicht dabei — die gehören ihnen.
+            samt der Tipps, zu denen sie gehören, deine Wünsche und deine Fotos.
           </p>
           <p className="form__actions">
             {/* Ein Link und kein Knopf mit fetch: Der Browser übernimmt Download,

@@ -28,7 +28,7 @@ import { useEffect, useRef, useState } from 'react';
  * Wer also den Text unten austauscht, zählt hier hoch — sonst spricht das
  * Overlay nur noch zu denen, die vorher nie da waren.
  */
-const SCHLUESSEL = 'hot:signal-gesehen:4';
+const SCHLUESSEL = 'hot:signal-gesehen:5';
 
 function schonGesehen(): boolean {
   try {
@@ -111,6 +111,11 @@ export default function SignalHinweis({ url, onKonto }: Props) {
               Einladungslinks pro Konto.
             </li>
             <li>
+              Du kannst die Seite <strong>als App auf den Home-Bildschirm legen</strong> — im
+              Browser-Menü «Zum Home-Bildschirm hinzufügen» wählen. Eigenes Icon, keine
+              Adressleiste, und sie öffnet auch ohne Netz.
+            </li>
+            <li>
               Du kannst dich <strong>per Mail informieren lassen</strong>, wenn konkrete Tipps
               gesucht werden — oder wenn jemand etwas zu deinen Tipps schreibt.
             </li>
@@ -123,7 +128,7 @@ export default function SignalHinweis({ url, onKonto }: Props) {
               ZIP-Datei.
             </li>
           </ul>
-          {/* Drei der vier Punkte wohnen auf derselben Seite. Ohne diesen Weg
+          {/* Drei der fünf Punkte wohnen auf derselben Seite. Ohne diesen Weg
               bliebe die Liste eine Ankündigung, der man hinterhersuchen muss —
               und gesucht wird nur, was man schon kennt. */}
           <p className="hinweis__text">

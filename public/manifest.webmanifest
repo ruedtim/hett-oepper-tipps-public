@@ -3,6 +3,7 @@
   "short_name": "Tipps",
   "description": "Reisetipps aus dem Freundeskreis",
   "lang": "de-CH",
+  "id": "/",
   "start_url": "/",
   "scope": "/",
   "display": "standalone",

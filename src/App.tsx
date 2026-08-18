@@ -105,10 +105,24 @@ export default function App() {
         setData(fresh);
         setError(null);
       })
-      .catch((cause: unknown) => setError(cause instanceof Error ? cause.message : String(cause)));
+      .catch((cause: unknown) => {
+        // Offline ist kein Defekt: Seit die App installierbar ist (#76),
+        // öffnet sie auch ohne Netz — «Failed to fetch» sagt dann niemandem
+        // etwas, «kein Netz» schon.
+        if (!navigator.onLine) setError('kein Netz');
+        else setError(cause instanceof Error ? cause.message : String(cause));
+      });
   }, []);
 
   useEffect(() => reload(), [reload]);
+
+  // Zurück im Netz → frisch laden. Die installierte App hat keinen
+  // Browser-Reload-Knopf; wer aus dem Flugmodus kommt, soll nicht auf
+  // «kein Netz» sitzen bleiben.
+  useEffect(() => {
+    window.addEventListener('online', reload);
+    return () => window.removeEventListener('online', reload);
+  }, [reload]);
 
   // Auch nach einem Passwortwechsel neu laden — sonst bliebe das
   // Startpasswort-Banner stehen, bis jemand die Seite neu lädt.
@@ -315,6 +329,11 @@ export default function App() {
     return (
       <main className="shell">
         <p className="status status--error">Die Tipps konnten nicht geladen werden ({error}).</p>
+        <p>
+          <button type="button" className="button" onClick={reload}>
+            Nochmal versuchen
+          </button>
+        </p>
       </main>
     );
   }

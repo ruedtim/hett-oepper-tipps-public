@@ -14,6 +14,18 @@ window.addEventListener('vite:preloadError', (event) => {
   window.location.reload();
 });
 
+/**
+ * Der Service Worker der PWA (public/sw.js, #76) — nur im Produktionsbuild:
+ * Im Dev-Server käme sein Cache dem HMR in die Quere. Fehlschläge werden
+ * verschluckt, weil er eine Beigabe ist: Die App läuft ohne ihn genauso, nur
+ * öffnet sie dann offline nicht.
+ */
+if (import.meta.env.PROD && 'serviceWorker' in navigator) {
+  window.addEventListener('load', () => {
+    navigator.serviceWorker.register('/sw.js').catch(() => {});
+  });
+}
+
 const container = document.getElementById('root');
 if (!container) throw new Error('#root fehlt in index.html');
 

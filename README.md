@@ -60,6 +60,11 @@ auf **alle** Notizen, nicht nur auf die erste — wer zu einem fremden Tipp etwa
 beigesteuert hat, findet ihn unter seinem Namen wieder, und die Karte schreibt dann
 «von Tim · ergänzt von Sara» statt eines Treffers, der wie ein Fehler aussieht.
 
+Die Seite ist eine **PWA**: «Zum Home-Bildschirm hinzufügen» macht sie zur App
+mit eigenem Icon. Ein Service Worker (`public/sw.js`) hält Hülle und Bundle
+vor, damit sie auch ohne Netz öffnet — die Tipps selbst brauchen Netz, bewusst
+(warum, steht in `CLAUDE.md`).
+
 ## Loslegen
 
 ```bash

@@ -111,7 +111,7 @@ export default function Infos({ onClose }: Props) {
         <h2 className="infos__title">Über das Projekt</h2>
         <p>Gebastelt von Tim.</p>
         <p>
-          Der vollständige Code dieser Plattform liegt auf{' '}
+          Der Code dieser Plattform liegt auf{' '}
           <a
             className="textlink"
             href="https://github.com/ruedtim/hett-oepper-tipps-public"
@@ -120,7 +120,7 @@ export default function Infos({ onClose }: Props) {
           >
             GitHub
           </a>
-          . Ohne die Tipps, versteht sich — die bleiben unter uns.
+          .
         </p>
       </section>
     </div>

@@ -1,7 +1,15 @@
 import { useCallback, useEffect, useState } from 'react';
 import { ApiError } from '../lib/api';
-import { createUser, fetchGast, listUsers, updateGast, updateUser } from '../lib/admin';
-import type { AdminUser, GastZugang } from '../lib/admin';
+import {
+  createUser,
+  ladeZugangEin,
+  listeZugangsbitten,
+  listUsers,
+  nimmZugangZurueck,
+  updateUser,
+  verwirfZugang,
+} from '../lib/admin';
+import type { AdminUser, Zugangsbitte } from '../lib/admin';
 import { formatDay } from '../lib/dates';
 
 interface Props {
@@ -15,9 +23,13 @@ interface Props {
  *
  * Löschen gibt es absichtlich nicht — Namen stehen in Notizen und im Verlauf.
  *
- * Am Ende steht der Gäste-Zugang. Er liegt in derselben Tabelle, ist aber kein
- * Konto einer Person: ein Passwort, das herumgegeben wird, und nur Lesen.
- * Deshalb ein eigener Abschnitt statt einer Zeile in der Liste oben.
+ * Hier stand bis #70 auch der Gäste-Zugang («nur schauen»). Er ist zu, der
+ * Abschnitt ist weg; die Begründung steht in migrations/0012_gast_zu.sql.
+ *
+ * An seiner Stelle stehen seit #71 die Zugangsbitten: was jemand auf dem
+ * Anmeldebildschirm eingetippt hat, und der Knopf, der ihm einen
+ * Einladungslink schickt. Das ist der einzige Ort, an dem so ein Link
+ * entsteht — von allein kommt niemand herein.
  */
 export default function UserAdmin({ onClose }: Props) {
   const [users, setUsers] = useState<AdminUser[] | null>(null);
@@ -37,9 +49,16 @@ export default function UserAdmin({ onClose }: Props) {
   const [renameId, setRenameId] = useState<number | null>(null);
   const [renameName, setRenameName] = useState('');
 
-  const [gast, setGast] = useState<GastZugang | null>(null);
-  const [gastPassword, setGastPassword] = useState('');
-  const [gastBusy, setGastBusy] = useState(false);
+  const [bitten, setBitten] = useState<Zugangsbitte[]>([]);
+  const [bittenBusy, setBittenBusy] = useState<number | null>(null);
+  /**
+   * Getrennt von `bitten.length === 0`, weil beides sonst gleich aussähe: «es
+   * bittet gerade niemand» ist eine Aussage über die Runde, «ich konnte nicht
+   * nachsehen» eine über die App. Dieselbe Regel wie bei der Wunschseite für
+   * Gäste — ein leerer Zustand darf nichts behaupten, was der Server bloss
+   * nicht geliefert hat.
+   */
+  const [bittenFehler, setBittenFehler] = useState(false);
 
   const load = useCallback(async () => {
     setError(null);
@@ -57,14 +76,17 @@ export default function UserAdmin({ onClose }: Props) {
       return;
     }
 
-    // Getrennt und mit eigenem Auffangnetz: Solange die Migration 0005 remote
-    // noch nicht angewandt ist, antwortet dieser Endpunkt mit einem Fehler —
-    // und dann wäre es besonders schlecht, wenn deswegen die Kontenverwaltung
-    // ausfiele. Ohne Antwort fehlt bloss der Abschnitt «Nur schauen».
+    // Getrennt und mit eigenem Auffangnetz — wie früher beim Gäste-Abschnitt:
+    // Solange die Migration 0013 remote nicht angewandt ist, antwortet dieser
+    // Endpunkt mit einem Fehler, und dann wäre es besonders schlecht, wenn
+    // deswegen die ganze Kontenverwaltung ausfiele. Ohne Antwort fehlt bloss
+    // der Abschnitt «Zugangsbitten».
     try {
-      setGast(await fetchGast());
+      setBitten((await listeZugangsbitten()).bitten);
+      setBittenFehler(false);
     } catch {
-      setGast(null);
+      setBitten([]);
+      setBittenFehler(true);
     }
   }, []);
 
@@ -89,6 +111,30 @@ export default function UserAdmin({ onClose }: Props) {
       setError(cause instanceof ApiError ? cause.message : 'Das hat nicht geklappt.');
     } finally {
       setCreating(false);
+    }
+  }
+
+  /**
+   * Ein Handgriff an einer Zugangsbitte. Wie `patch()` daneben, nur mit der
+   * Bitte statt dem Konto als Sperre — und mit einer Meldung, die der Aufrufer
+   * erst aus dem Ergebnis baut: Beim Einladen hängt sie daran, ob die Mail
+   * wirklich rausging.
+   */
+  async function bittenLauf<T>(
+    bitte: Zugangsbitte,
+    was: () => Promise<T>,
+    doneText: (ergebnis: T) => string,
+  ) {
+    setBittenBusy(bitte.id);
+    setError(null);
+    setNotice(null);
+    try {
+      setNotice(doneText(await was()));
+      await load();
+    } catch (cause) {
+      setError(cause instanceof ApiError ? cause.message : 'Das hat nicht geklappt.');
+    } finally {
+      setBittenBusy(null);
     }
   }
 
@@ -138,34 +184,6 @@ export default function UserAdmin({ onClose }: Props) {
     setRenameId(null);
     setRenameName('');
   }
-
-  async function gastLauf(patch: Parameters<typeof updateGast>[0], doneText: string) {
-    setGastBusy(true);
-    setError(null);
-    setNotice(null);
-    try {
-      await updateGast(patch);
-      setNotice(doneText);
-      setGastPassword('');
-      await load();
-    } catch (cause) {
-      setError(cause instanceof ApiError ? cause.message : 'Das hat nicht geklappt.');
-    } finally {
-      setGastBusy(false);
-    }
-  }
-
-  function setzeGastPasswort(event: React.FormEvent) {
-    event.preventDefault();
-    void gastLauf(
-      { neuesPasswort: gastPassword },
-      'Gäste-Passwort gesetzt — der Zugang ist offen. Alle Gäste müssen sich neu anmelden.',
-    );
-  }
-
-  // `password_changed_at` ist ein voller Zeitstempel, formatDay() erwartet eine
-  // reine Tagesangabe — und der Tag ist hier alles, was interessiert.
-  const gastTag = gast?.passwortGesetztAm ? formatDay(gast.passwortGesetztAm.slice(0, 10)) : null;
 
   if (denied) {
     return (
@@ -408,64 +426,119 @@ export default function UserAdmin({ onClose }: Props) {
         </div>
       </form>
 
-      <h2 className="form__title">Nur schauen</h2>
+      <h2 className="form__title">Zugangsbitten</h2>
       <p className="form__context">
-        Ein Passwort ohne Namen, für alle, die bloss mitlesen sollen. Gäste sehen die Tipps mit
-        Ort, Kategorie und Text — aber keine Wünsche, keine Namen und keine Fotos. Eintragen,
-        Ändern und Rückmelden sind zu. Ein neues Passwort beendet sofort alle laufenden
-        Gäste-Sitzungen.
+        Wer auf dem Anmeldebildschirm um Zugang gebeten hat. «Einladung schicken» erzeugt
+        einen einmaligen Link und schickt ihn an die angegebene Adresse — die Person legt
+        sich damit ihr Konto selbst an, mit eigenem Passwort. Diese Einladungen gehen nicht
+        von deinen drei ab.
       </p>
 
-      {gast && (
-        <>
-          <p className="pending__meta">
-            {gastTag === null
-              ? 'Noch kein Gäste-Passwort gesetzt — der Zugang ist zu.'
-              : gast.aktiv
-                ? `Offen. Passwort gesetzt am ${gastTag}.`
-                : `Zu. Das letzte Passwort wurde am ${gastTag} gesetzt.`}
-          </p>
+      {bittenFehler ? (
+        <p className="pending__meta">
+          Die Zugangsbitten liessen sich gerade nicht laden.
+        </p>
+      ) : bitten.length === 0 ? (
+        <p className="pending__meta">Gerade bittet niemand um Zugang.</p>
+      ) : (
+        bitten.map((bitte) => (
+          <article key={bitte.id} className="pending">
+            <h3 className="pending__title">
+              {bitte.vorname} {bitte.nachname}
+            </h3>
+            <p className="pending__meta">
+              {bitte.email} · gefragt am {formatDay(bitte.erstellt)}
+            </p>
+            {/* Name und Adresse kommen von jemandem ohne Konto — das muss
+                dabeistehen, sonst liest sich die Zeile wie eine Auskunft der App. */}
+            <p className="pending__meta">
+              Ungeprüfte Angaben einer fremden Person.
+            </p>
 
-          <form className="form" onSubmit={setzeGastPasswort}>
-            <label className="field">
-              <span>
-                {gast.passwortGesetztAm === null ? 'Gäste-Passwort' : 'Neues Gäste-Passwort'}{' '}
-                <em>mind. 8 Zeichen</em>
-              </span>
-              <input
-                required
-                minLength={8}
-                value={gastPassword}
-                onChange={(event) => setGastPassword(event.target.value)}
-                placeholder="Wird herumgegeben, nicht gewechselt"
-              />
-            </label>
-            <div className="form__actions">
-              <button type="submit" className="button" disabled={gastBusy}>
-                {gastBusy ? 'Moment…' : 'Passwort setzen'}
-              </button>
-              {/* Zumachen geht nur, wenn es etwas zuzumachen gibt. Aufmachen
-                  ohne gesetztes Passwort weist der Server ohnehin ab. */}
-              {gast.passwortGesetztAm !== null && (
+            {bitte.einladung ? (
+              <>
+                <p className="pending__meta">
+                  Einladung geschickt
+                  {bitte.einladung.von && ` von ${bitte.einladung.von}`} am{' '}
+                  {formatDay(bitte.einladung.geschicktAm)} ·{' '}
+                  {bitte.einladung.status === 'offen'
+                    ? `noch nicht eingelöst, gilt bis ${formatDay(bitte.einladung.bis)}`
+                    : bitte.einladung.status === 'eingeloest'
+                      ? 'eingelöst'
+                      : bitte.einladung.status === 'widerrufen'
+                        ? 'zurückgezogen'
+                        : 'abgelaufen'}
+                </p>
+                {/* Zum Weitergeben von Hand, falls die Mail nicht ankam. Nur
+                    solange der Link überhaupt noch etwas tut. */}
+                {bitte.einladung.status === 'offen' && (
+                  <input
+                    className="teilenlink__url"
+                    readOnly
+                    value={bitte.einladung.url}
+                    onFocus={(event) => event.target.select()}
+                    aria-label={`Einladungslink für ${bitte.vorname} ${bitte.nachname}`}
+                  />
+                )}
+                <footer className="pending__actions">
+                  {bitte.einladung.status === 'offen' && (
+                    <button
+                      type="button"
+                      className="button button--ghost"
+                      disabled={bittenBusy === bitte.id}
+                      onClick={() =>
+                        void bittenLauf(
+                          bitte,
+                          () => nimmZugangZurueck(bitte.id),
+                          () =>
+                            `Die Einladung an ${bitte.vorname} ${bitte.nachname} ist zurückgezogen — ` +
+                            'die Bitte steht wieder offen.',
+                        )
+                      }
+                    >
+                      Einladung zurückziehen
+                    </button>
+                  )}
+                </footer>
+              </>
+            ) : (
+              <footer className="pending__actions">
                 <button
                   type="button"
-                  className="button button--ghost"
-                  disabled={gastBusy}
+                  className="button"
+                  disabled={bittenBusy === bitte.id}
                   onClick={() =>
-                    void gastLauf(
-                      { aktiv: !gast.aktiv },
-                      gast.aktiv
-                        ? 'Der Gäste-Zugang ist zu — laufende Gäste-Sitzungen sind beendet.'
-                        : 'Der Gäste-Zugang ist wieder offen.',
+                    void bittenLauf(
+                      bitte,
+                      () => ladeZugangEin(bitte.id),
+                      (ergebnis) =>
+                        ergebnis.versandFehler
+                          ? `Die Einladung ist erzeugt, aber die Mail an ${bitte.email} ging nicht ` +
+                            'raus. Der Link steht bei der Bitte — gib ihn von Hand weiter.'
+                          : `Einladungslink an ${bitte.email} geschickt.`,
                     )
                   }
                 >
-                  {gast.aktiv ? 'Zugang schliessen' : 'Zugang öffnen'}
+                  {bittenBusy === bitte.id ? 'Moment…' : 'Einladung schicken'}
                 </button>
-              )}
-            </div>
-          </form>
-        </>
+                <button
+                  type="button"
+                  className="button button--ghost"
+                  disabled={bittenBusy === bitte.id}
+                  onClick={() =>
+                    void bittenLauf(
+                      bitte,
+                      () => verwirfZugang(bitte.id),
+                      () => `Die Bitte von ${bitte.vorname} ${bitte.nachname} ist verworfen.`,
+                    )
+                  }
+                >
+                  Verwerfen
+                </button>
+              </footer>
+            )}
+          </article>
+        ))
       )}
     </div>
   );

@@ -133,18 +133,52 @@ export function updateUser(
   return send<{ ok: true }>(`/api/admin/users/${id}`, 'PATCH', patch);
 }
 
-/** Zustand des Gäste-Zugangs («nur schauen»). */
-export interface GastZugang {
-  aktiv: boolean;
-  /** null = es wurde noch nie ein Gäste-Passwort gesetzt. */
-  passwortGesetztAm: string | null;
+
+// ---------------------------------------------------------- Zugangsbitten ---
+
+/** Eine Bitte um Zugang vom Anmeldebildschirm (#71). */
+export interface Zugangsbitte {
+  id: number;
+  vorname: string;
+  nachname: string;
+  email: string;
+  /** Tag, an dem gefragt wurde. */
+  erstellt: string;
+  /** Gesetzt, sobald ein Admin einen Einladungslink verschickt hat. */
+  einladung: {
+    id: string;
+    url: string;
+    /** Letzter gültiger Tag — inklusiv, wie bei den Freigabelinks. */
+    bis: string;
+    status: 'offen' | 'eingeloest' | 'widerrufen' | 'abgelaufen';
+    geschicktAm: string;
+    von: string | null;
+  } | null;
 }
 
-export function fetchGast(): Promise<GastZugang> {
-  return call('/api/admin/gast');
+export function listeZugangsbitten(): Promise<{ bitten: Zugangsbitte[] }> {
+  return call('/api/admin/zugang');
 }
 
-/** Ein neues Passwort beendet alle laufenden Gäste-Sitzungen. */
-export function updateGast(patch: { neuesPasswort?: string; aktiv?: boolean }) {
-  return send<{ ok: true }>('/api/admin/gast', 'PATCH', patch);
+/**
+ * Den Einladungslink erzeugen und an die angegebene Adresse schicken. Die
+ * Antwort trägt die `url` immer mit: Ging die Mail nicht raus (`versandFehler`),
+ * ist die Einladung trotzdem da und lässt sich von Hand weitergeben.
+ */
+export function ladeZugangEin(id: number) {
+  return send<{ ok: true; url: string; versandFehler: boolean }>(
+    `/api/admin/zugang/${id}`,
+    'POST',
+    {},
+  );
+}
+
+/** Die verschickte Einladung zurückziehen — die Bitte steht danach wieder offen. */
+export function nimmZugangZurueck(id: number) {
+  return send<{ ok: true }>(`/api/admin/zugang/${id}`, 'PATCH', {});
+}
+
+/** Verwerfen. Die Zeile ist danach weg, samt der Adresse. */
+export function verwirfZugang(id: number) {
+  return call<{ ok: true }>(`/api/admin/zugang/${id}`, { method: 'DELETE' });
 }

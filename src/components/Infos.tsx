@@ -1,6 +1,6 @@
 interface Props {
   onClose: () => void;
-  /** Beitritts-Link zum Signal-Chat — `null` für Gäste und ohne Konfiguration. */
+  /** Beitritts-Link zum Signal-Chat — `null`, wenn er nicht konfiguriert ist. */
   signalChat: string | null;
 }
 
@@ -66,11 +66,8 @@ export default function Infos({ onClose, signalChat }: Props) {
             Wer einen davon öffnet, legt sich selbst ein Konto an — mit eigenem Namen, eigener
             Adresse, eigenem Passwort, und niemand muss etwas freischalten. Wem du die Sammlung
             zeigst, entscheidest du damit selbst; sind deine drei aufgebraucht, kannst du dort
-            neue bestellen.
-          </li>
-          <li>
-            <strong>Gast.</strong> Als Gast (mit Zugangspasswort) kannst du Tipps ansehen, siehst
-            aber keine Fotos und nicht, wer welche Beiträge erstellt hat.
+            neue bestellen. Wer niemanden aus der Runde kennt, bittet auf dem
+            Anmeldebildschirm um Zugang — dann schickt ein Admin den Link.
           </li>
           <li>
             <strong>Mitdenken.</strong> Du hast einen Vorschlag, was an diesem Projekt geändert

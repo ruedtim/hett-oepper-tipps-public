@@ -92,7 +92,12 @@ export interface UserRow {
   must_change_password: number;
   created_at: string;
   password_changed_at: string | null;
-  /** 1 nur beim Gäste-Zugang («nur schauen»): darf lesen, sonst nichts. */
+  /**
+   * 1 nur beim Gäste-Zugang («nur schauen»): darf lesen, sonst nichts. Seit #70
+   * führt kein Weg mehr in diese Zeile — die Spalte bleibt, weil der Leseschutz
+   * daran hängt (functions/_middleware.ts, functions/lib/appdata.ts) und weil
+   * sie `name_key = 'gast'` reserviert. Begründung in migrations/0012_gast_zu.sql.
+   */
   is_guest: number;
   /**
    * JSON-Array der früher getragenen Namen, je Eintrag `{key, name}`. Seit
@@ -253,13 +258,4 @@ export function getUserByEmail(db: D1Database, email: string): Promise<UserRow |
     )
     .bind(email)
     .first<UserRow>();
-}
-
-/**
- * Der Gäste-Zugang. Ohne Namen nachgeschlagen — «nur schauen» fragt bloss nach
- * einem Passwort. Dass es höchstens eine solche Zeile gibt, sichert der
- * partielle UNIQUE-Index aus migrations/0005_gast.sql.
- */
-export function getGuestUser(db: D1Database): Promise<UserRow | null> {
-  return db.prepare('SELECT * FROM users WHERE is_guest = 1').first<UserRow>();
 }

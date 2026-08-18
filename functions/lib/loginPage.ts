@@ -7,7 +7,7 @@
  * anderen Seiten vor dem Gate (lib/htmlSeite.ts), damit die drei nicht
  * auseinanderlaufen.
  *
- * Vier Wege hinein, und alle vier funktionieren OHNE JavaScript: Die drei
+ * Drei Wege hinein, und alle drei funktionieren OHNE JavaScript: Die beiden
  * Nebenwege stecken in <details>-Elementen, die der Browser von sich aus auf-
  * und zuklappt, und jeder ist ein echtes <form method="post">. Deshalb
  * <details> und nicht Knöpfe mit einem Umschalt-Handler — die wären ohne
@@ -26,15 +26,15 @@
 
 import { escapeHtml, ICON_LINKS, SEITEN_CSS } from './htmlSeite';
 
-type Bereich = 'anmelden' | 'gast' | 'zugang' | 'vergessen';
+type Bereich = 'anmelden' | 'zugang' | 'vergessen';
 
 export function loginPage(
   options: {
     error?: string;
     notice?: string;
     /**
-     * Welcher Abschnitt offen ist und die Meldung trägt. Ohne das stünde der
-     * Fehler des Gäste-Passworts unter dem Namensformular — beim Weg ohne
+     * Welcher Abschnitt offen ist und die Meldung trägt. Ohne das stünde die
+     * Antwort auf eine Zugangsbitte unter dem Namensformular — beim Weg ohne
      * JavaScript die einzige Rückmeldung, die es gibt.
      */
     bereich?: Bereich;
@@ -101,37 +101,27 @@ ${ICON_LINKS}
         </form>
       </details>
 
-      <details class="alt"${offen('gast')}>
-        <summary>Nur schauen</summary>
-        <form method="post" action="/api/login" id="gast">
-          <!-- Verrät dem Server, dass kein Name kommt. Ohne JavaScript ist das
-               die einzige Unterscheidung zwischen den beiden Formularen. -->
-          <input type="hidden" name="gast" value="1">
-          <p class="hint">
-            Die Tipps lesen, ohne Konto — ohne Wünsche, Namen und Fotos. Eintragen und ändern
-            geht damit nicht.
-          </p>
-          <input
-            type="password" name="password" required${bereich === 'gast' ? ' autofocus' : ''}
-            autocomplete="current-password" placeholder="Gäste-Passwort"
-            aria-label="Gäste-Passwort">
-          <button type="submit">Reinschauen</button>
-          ${meldung('gast')}
-        </form>
-      </details>
-
       <details class="alt"${offen('zugang')}>
         <summary>Gib mir bitte Zugang!</summary>
         <form method="post" action="/api/zugang" id="zugang">
           <p class="hint">
             Kennst du jemanden aus der Runde? Am schnellsten geht ein Einladungslink — jedes
             Konto hat drei davon zu vergeben, und damit legst du dir selbst eines an. Sonst:
-            Sag hier, wie du heisst; die Runde bekommt eine Nachricht und meldet sich bei dir.
+            Sag hier, wer du bist. Meldet dich die Runde frei, kommt ein Einladungslink an
+            deine Adresse, und damit legst du dein Konto selbst an.
           </p>
           <input
-            type="text" name="name" required maxlength="40"${bereich === 'zugang' ? ' autofocus' : ''}
-            autocomplete="name" placeholder="Dein Name"
-            aria-label="Dein Name">
+            type="text" name="vorname" required maxlength="40"${bereich === 'zugang' ? ' autofocus' : ''}
+            autocomplete="given-name" placeholder="Vorname"
+            aria-label="Vorname">
+          <input
+            type="text" name="nachname" required maxlength="40"
+            autocomplete="family-name" placeholder="Nachname"
+            aria-label="Nachname">
+          <input
+            type="email" name="email" required maxlength="200"
+            autocomplete="email" placeholder="E-Mail"
+            aria-label="E-Mail-Adresse">
           <button type="submit">Bitte abschicken</button>
           ${meldung('zugang')}
         </form>
@@ -172,17 +162,18 @@ ${ICON_LINKS}
 (function () {
   var normal = document.getElementById('normal');
   var login = document.getElementById('login');
-  var gast = document.getElementById('gast');
   var zugang = document.getElementById('zugang');
   var vergessen = document.getElementById('vergessen');
   var change = document.getElementById('change');
   var lead = document.getElementById('lead');
   var startPassword = '';
 
-  // Anmelden und «nur schauen» gehen beide an /api/login und unterscheiden sich
-  // nur im Rumpf — ein Handler für beide, damit die Fehlerbehandlung nicht
-  // zweimal dasteht und auseinanderläuft.
-  function anmelden(form, koerper) {
+  // Bis #70 bedienten sich hier zwei Formulare: Anmelden und «nur schauen»
+  // gingen beide an /api/login und unterschieden sich nur im Rumpf. Der zweite
+  // ist weg; die eigene Funktion bleibt, weil sie den Fall «erst noch das
+  // Startpasswort wechseln» mitträgt und dafür Zustand über den Aufruf hinaus
+  // braucht (startPassword).
+  function anmelden(form) {
     form.addEventListener('submit', async function (event) {
       event.preventDefault();
       var button = form.querySelector('button');
@@ -193,7 +184,10 @@ ${ICON_LINKS}
         var response = await fetch('/api/login', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(koerper(form))
+          body: JSON.stringify({
+            name: form.elements.name.value,
+            password: form.elements.password.value
+          })
         });
         var data = await response.json().catch(function () { return {}; });
         if (response.ok) {
@@ -220,12 +214,7 @@ ${ICON_LINKS}
     });
   }
 
-  anmelden(login, function (form) {
-    return { name: form.elements.name.value, password: form.elements.password.value };
-  });
-  anmelden(gast, function (form) {
-    return { gast: true, password: form.elements.password.value };
-  });
+  anmelden(login);
 
   // Zugangsbitte und «Passwort vergessen» verhalten sich gleich: einmal
   // abschicken, dann steht da eine Antwort und kein Formular mehr. Ein Handler
@@ -260,7 +249,11 @@ ${ICON_LINKS}
   }
 
   bitte(zugang, '/api/zugang', function (form) {
-    return { name: form.elements.name.value };
+    return {
+      vorname: form.elements.vorname.value,
+      nachname: form.elements.nachname.value,
+      email: form.elements.email.value
+    };
   }, 'Danke — die Bitte ist angekommen.');
 
   bitte(vergessen, '/api/passwort-vergessen', function (form) {

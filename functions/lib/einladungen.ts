@@ -11,6 +11,13 @@
  *
  * Die Begründungen für Tabelle, Budget-Zählung, Ablauf und Spiegel-Ausnahme
  * stehen in `migrations/0011_einladungen.sql`.
+ *
+ * `aus_bitte = 1` (seit #71) ist die eine Sorte Einladung, die NICHT jemandem
+ * persönlich gehört: Ein Admin hat sie auf eine Zugangsbitte hin verschickt.
+ * Sie zählt deshalb nicht gegen das Budget und steht nicht in der Liste unter
+ * «Konto» — jede Abfrage hier, die «meine Einladungen» meint, trägt darum
+ * `aus_bitte = 0`. Verwaltet wird sie in `lib/zugangsbitten.ts`, bei der Bitte,
+ * aus der sie entstanden ist.
  */
 
 import { heuteIso } from '../../shared/datum.mjs';
@@ -47,13 +54,27 @@ export interface Einladung {
   eingeloestAm: string | null;
 }
 
-export function statusOf(zeile: EinladungRow, heute: string): EinladungsStatus {
+/**
+ * Nimmt nur die drei Felder, die den Zustand ausmachen, statt der ganzen Zeile:
+ * `lib/zugangsbitten.ts` liest die Einladung über einen JOIN mit umbenannten
+ * Spalten und hat keine vollständige `EinladungRow` zur Hand.
+ */
+export function statusOf(
+  zeile: Pick<EinladungRow, 'bis' | 'eingeloest_am' | 'widerrufen_am'>,
+  heute: string,
+): EinladungsStatus {
   if (zeile.eingeloest_am) return 'eingeloest';
   if (zeile.widerrufen_am) return 'widerrufen';
   return zeile.bis >= heute ? 'offen' : 'abgelaufen';
 }
 
-/** Alle je erzeugten Einladungen eines Kontos — auch eingelöste und widerrufene. */
+/**
+ * Alle je erzeugten Einladungen eines Kontos — auch eingelöste und widerrufene,
+ * aber ohne die im Amt verschickten (`aus_bitte = 1`): Die gehören nicht dieser
+ * Person, und sie zählen unten auch nicht gegen ihr Budget. Beides muss
+ * zusammenpassen, sonst widersprächen sich die Liste und die Zahl «noch N»
+ * darunter.
+ */
 export async function getEinladungenVon(
   db: D1Database,
   vonId: number,
@@ -63,7 +84,7 @@ export async function getEinladungenVon(
     .prepare(
       `SELECT e.*, u.name AS eingeloest_name
        FROM einladungen e LEFT JOIN users u ON u.id = e.eingeloest_von
-       WHERE e.von_id = ?1 ORDER BY e.erstellt DESC, e.id`,
+       WHERE e.von_id = ?1 AND e.aus_bitte = 0 ORDER BY e.erstellt DESC, e.id`,
     )
     .bind(vonId)
     .all<EinladungRow & { eingeloest_name: string | null }>();
@@ -86,7 +107,7 @@ export async function getEinladungsStand(
   const zeile = await db
     .prepare(
       `SELECT einladungs_budget AS budget, einladungen_bestellt_am AS bestellt,
-              (SELECT COUNT(*) FROM einladungen WHERE von_id = ?1) AS erzeugt
+              (SELECT COUNT(*) FROM einladungen WHERE von_id = ?1 AND aus_bitte = 0) AS erzeugt
        FROM users WHERE id = ?1`,
     )
     .bind(vonId)
@@ -106,16 +127,32 @@ export async function getEinladungsStand(
  * Eine noch einlösbare Einladung samt Namen des Einladenden — für die
  * Formularseite. Ein deaktiviertes Konto macht seine offenen Links beim LESEN
  * tot, wie bei den geteilten Listen: Deaktivieren muss sofort wirken.
+ *
+ * Entstand die Einladung aus einer Zugangsbitte (#71), kommen die dort schon
+ * eingetippten Angaben mit — das Formular füllt sie vor. Alles NULL bei einer
+ * persönlichen Einladung, und der LEFT JOIN kostet nichts: `einladung_id` ist
+ * in `zugangsbitten` höchstens einmal belegt.
  */
 export function getOffeneEinladung(
   db: D1Database,
   id: string,
   heute: string,
-): Promise<{ id: string; von_id: number; von_name: string } | null> {
+): Promise<{
+  id: string;
+  von_id: number;
+  von_name: string;
+  bitte_vorname: string | null;
+  bitte_nachname: string | null;
+  bitte_email: string | null;
+} | null> {
   return db
     .prepare(
-      `SELECT e.id, e.von_id, u.name AS von_name
-       FROM einladungen e JOIN users u ON u.id = e.von_id
+      `SELECT e.id, e.von_id, u.name AS von_name,
+              z.vorname AS bitte_vorname, z.nachname AS bitte_nachname,
+              z.email AS bitte_email
+       FROM einladungen e
+       JOIN users u ON u.id = e.von_id
+       LEFT JOIN zugangsbitten z ON z.einladung_id = e.id
        WHERE e.id = ?1 AND e.eingeloest_am IS NULL AND e.widerrufen_am IS NULL
          AND e.bis >= ?2 AND u.disabled = 0`,
     )
@@ -126,7 +163,9 @@ export function getOffeneEinladung(
 /**
  * Das Budget steht IM Statement: `meta.changes === 0` heisst aufgebraucht.
  * Gezählt werden ALLE je erzeugten Zeilen — Widerruf und Ablauf geben nichts
- * zurück, sonst wäre «drei insgesamt» in Wahrheit «drei offene».
+ * zurück, sonst wäre «drei insgesamt» in Wahrheit «drei offene». Nicht gezählt
+ * werden die im Amt verschickten (`aus_bitte = 1`, #71): Sie gehören der Runde,
+ * nicht dem Konto, das sie ausgelöst hat.
  */
 export function einladungInsertStmt(
   db: D1Database,
@@ -136,7 +175,7 @@ export function einladungInsertStmt(
     .prepare(
       `INSERT INTO einladungen (id, von_id, erstellt, bis)
        SELECT ?1, ?2, ?3, ?4
-       WHERE (SELECT COUNT(*) FROM einladungen WHERE von_id = ?2)
+       WHERE (SELECT COUNT(*) FROM einladungen WHERE von_id = ?2 AND aus_bitte = 0)
            < (SELECT einladungs_budget FROM users WHERE id = ?2)`,
     )
     .bind(eintrag.id, eintrag.vonId, eintrag.erstellt, eintrag.bis);

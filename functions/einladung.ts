@@ -37,6 +37,7 @@ import { mailKonfiguriert, normalisiereEmail, sendeMail } from './lib/mail';
 import { createSessionValue, SESSION_COOKIE, sessionCookieHeader } from './lib/session';
 import { erzeugeToken, VERIFIKATION_GUELTIG_SEK } from './lib/token';
 import { MAX_NAME_LENGTH, pruefeNeuenNamen } from './lib/umbenennen';
+import { raeumeErledigteBitten } from './lib/zugangsbitten';
 import { hashPassword, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH } from './lib/users';
 
 export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
@@ -51,7 +52,10 @@ export const onRequestGet: PagesFunction<Env> = async ({ request, env }) => {
   const einladung = await ladeEinladung(env, token);
   if (!einladung.ok) return einladung.antwort;
 
-  return formular(token, einladung.vonName, {});
+  // Kommt die Einladung aus einer Zugangsbitte (#71), hat die Person Vorname,
+  // Nachname und Adresse schon auf dem Anmeldebildschirm eingetippt. Sie hier
+  // nochmal zu verlangen wäre eine Prüfung, ob sie sich noch erinnert.
+  return formular(token, einladung.vonName, einladung.ausBitte);
 };
 
 export const onRequestPost: PagesFunction<Env> = async (context) => {
@@ -141,6 +145,12 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   if (ergebnis[0]?.meta.changes !== 1) return linkTot();
   const userId = ergebnis[0].meta.last_row_id as number;
 
+  // Kam die Einladung aus einer Zugangsbitte (#71), ist die Bitte mit diesem
+  // Konto beantwortet und ihre Zeile schal. Hier ist die Stelle, an der das
+  // passiert — also wird hier weggeräumt, wie bei den Wünschen und den
+  // geteilten Listen: nach dem Schreiben und in try/catch.
+  await raeumeErledigteBitten(db, heute);
+
   // Bestätigungsmail nach der Antwort und nie im Weg — Mail darf nichts
   // aufhalten. Ohne Mail-Konfiguration entfällt sie still; die Adresse steht
   // dann unbestätigt am Konto, und die Konto-Seite bietet «nochmal senden» an.
@@ -191,14 +201,32 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 async function ladeEinladung(
   env: Env,
   token: string,
-): Promise<{ ok: true; id: string; vonName: string } | { ok: false; antwort: Response }> {
+): Promise<
+  | {
+      ok: true;
+      id: string;
+      vonName: string;
+      /** Angaben aus der Zugangsbitte, leer bei einer persönlichen Einladung. */
+      ausBitte: { vorname?: string; nachname?: string; email?: string };
+    }
+  | { ok: false; antwort: Response }
+> {
   // Das Muster zuerst: Müll kostet keinen D1-Read.
   if (!ID_MUSTER.test(token)) return { ok: false, antwort: linkTot() };
 
   try {
     const zeile = await getOffeneEinladung(env.DB as D1Database, token, heuteIso());
     if (!zeile) return { ok: false, antwort: linkTot() };
-    return { ok: true, id: zeile.id, vonName: zeile.von_name };
+    return {
+      ok: true,
+      id: zeile.id,
+      vonName: zeile.von_name,
+      ausBitte: {
+        ...(zeile.bitte_vorname ? { vorname: zeile.bitte_vorname } : {}),
+        ...(zeile.bitte_nachname ? { nachname: zeile.bitte_nachname } : {}),
+        ...(zeile.bitte_email ? { email: zeile.bitte_email } : {}),
+      },
+    };
   } catch (error) {
     console.error('D1 beim Einlösen einer Einladung nicht erreichbar:', error);
     return {

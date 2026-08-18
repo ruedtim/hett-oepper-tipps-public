@@ -1,25 +1,39 @@
+import { heuteIso } from '../../shared/datum.mjs';
 import { searchKey } from '../../shared/normalize.mjs';
 import type { Env } from '../lib/env';
 import { githubClient, GitHubError } from '../lib/github';
 import { loginPage } from '../lib/loginPage';
+import { normalisiereEmail } from '../lib/mail';
+import { bitteInsertStmt, merkeIssueStmt } from '../lib/zugangsbitten';
 
 /**
- * «Gib mir bitte Zugang!» — die Bitte um ein Konto, als GitHub-Issue.
+ * «Gib mir bitte Zugang!» — die Bitte um ein Konto.
  *
- * Der einzige Endpunkt der App, der etwas nach draussen schickt, OHNE dass
- * jemand angemeldet ist (die Ausnahme dafür steht in functions/_middleware.ts).
- * Damit gilt die Begründung aus api/feedback.ts hier ausdrücklich NICHT: Dort
- * trägt das Passwort-Gate den Spam-Schutz, hier gibt es keines. Deshalb:
+ * Der einzige Endpunkt der App, der ohne Sitzung SCHREIBT (die Ausnahme dafür
+ * steht in functions/_middleware.ts). Damit gilt die Begründung aus
+ * api/feedback.ts hier ausdrücklich NICHT: Dort trägt das Passwort-Gate den
+ * Spam-Schutz, hier gibt es keines. Deshalb:
  *
- *  1. Ein Deckel auf gleichzeitig offenen Bitten. Er begrenzt nicht die Zahl der
- *     Versuche, sondern den Schaden — mehr als MAX_OFFEN Issues kann niemand
- *     erzeugen, egal wie oft er drückt. Solange der Besitzer die Bitten
- *     abarbeitet (schliessen genügt), bleibt der Weg offen.
- *  2. Dieselbe Bitte zweimal ergibt kein zweites Issue. Bremst den offensicht-
- *     lichsten Missbrauch und erspart dem Besitzer Dubletten, wenn jemand
- *     ungeduldig nochmal drückt.
- *  3. Nur ein Name, nichts sonst. Kein Freitext heisst keine Bühne für Texte,
- *     die woanders gelesen werden sollen.
+ *  1. Ein Deckel auf gleichzeitig OFFENEN Bitten (lib/zugangsbitten.ts). Er
+ *     begrenzt nicht die Zahl der Versuche, sondern den Schaden — mehr als
+ *     MAX_OFFEN Zeilen kann niemand erzeugen, egal wie oft er drückt. Und er
+ *     geht von selbst wieder auf, sobald die Admins die Bitten in der App
+ *     erledigen; früher hing das daran, dass jemand GitHub-Issues schloss.
+ *  2. Dieselbe Adresse zweimal ergibt keine zweite Zeile (partieller
+ *     UNIQUE-Index) — die Antwort bleibt dabei dasselbe freundliche «Danke».
+ *  3. Kein Freitextfeld. Vorname, Nachname, Adresse — mehr nicht, also keine
+ *     Bühne für Texte, die woanders gelesen werden sollen.
+ *  4. Von hier geht KEINE Mail hinaus. Ein Mailversand an einer Stelle, die
+ *     Fremden offensteht, wäre ein Verstärker: Man könnte die App fremde
+ *     Postfächer anschreiben lassen. Verschickt wird erst, wenn ein Admin
+ *     drückt (api/admin/zugang/[id].ts).
+ *
+ * DIE REIHENFOLGE IST ERST D1, DANN GITHUB, und das ist eine bewusste
+ * Änderung: Früher antwortete dieser Endpunkt 503, wenn kein GitHub-Token
+ * eingerichtet war — das Issue WAR die Bitte. Jetzt ist die Bitte in D1
+ * aufgehoben und das Issue nur noch die Benachrichtigung. Also dieselbe Regel
+ * wie beim Mailen: Nicht benachrichtigen zu können macht nichts auf, es macht
+ * nur weniger. Ein Fehlschlag geht ins Log, die Bitte gilt trotzdem.
  *
  * Ein eigenes Label, NICHT `zugang`: Unter `zugang` sammelt
  * .github/workflows/expiry-check.yml die Warnungen über ablaufende Zugangsdaten
@@ -28,101 +42,168 @@ import { loginPage } from '../lib/loginPage';
  * unterdrücken — und die kommen einmal pro Jahr und dürfen nicht ausfallen.
  */
 
-const LABEL = 'zugangswunsch';
-const MAX_OFFEN = 10;
+export const LABEL = 'zugangswunsch';
 const MAX_NAME = 40;
 const MIN_NAME = 2;
 
-export const onRequestPost: PagesFunction<Env> = async ({ request, env }) => {
+export const onRequestPost: PagesFunction<Env> = async (context) => {
+  const { request, env } = context;
+
   // Ohne JavaScript kommt ein normales Formular an, mit JavaScript JSON —
   // dieselbe Unterscheidung wie in api/login.ts.
   const contentType = request.headers.get('Content-Type') ?? '';
   const isForm = contentType.includes('form');
 
-  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
-    return respond(isForm, 503, 'Das geht gerade nicht. Bitte wende dich direkt an die Runde.');
+  const felder = isForm
+    ? await ausFormular(request)
+    : await ausJson(request);
+
+  const vorname = saeubere(felder.vorname);
+  const nachname = saeubere(felder.nachname);
+
+  for (const [wert, was] of [
+    [vorname, 'Vornamen'],
+    [nachname, 'Nachnamen'],
+  ] as const) {
+    if (wert.length < MIN_NAME || wert.length > MAX_NAME) {
+      return respond(isForm, 400, `Bitte einen ${was} mit ${MIN_NAME} bis ${MAX_NAME} Zeichen.`);
+    }
   }
 
-  let roh = '';
-  if (isForm) {
-    const form = await request.formData();
-    roh = String(form.get('name') ?? '');
-  } else {
-    const body = (await request.json().catch(() => ({}))) as { name?: unknown };
-    roh = typeof body.name === 'string' ? body.name : '';
-  }
-
-  const name = saeubere(roh);
-  if (name.length < MIN_NAME || name.length > MAX_NAME) {
-    return respond(isForm, 400, `Bitte einen Namen mit ${MIN_NAME} bis ${MAX_NAME} Zeichen.`);
-  }
   // Dieselbe Hürde wie beim Anlegen eines Kontos: Was keinen Anmeldenamen
-  // ergibt, hilft dem Besitzer auch als Bitte nicht weiter.
-  if (!searchKey(name)) {
-    return respond(isForm, 400, `«${name}» ergibt keinen brauchbaren Namen.`);
+  // ergibt, hilft auch als Bitte nicht weiter — aus genau diesen beiden Teilen
+  // baut functions/einladung.ts später den Kontonamen.
+  if (!searchKey(`${vorname}${nachname}`)) {
+    return respond(isForm, 400, `«${vorname} ${nachname}» ergibt keinen brauchbaren Namen.`);
   }
 
-  const titel = `Zugang gewünscht: ${name}`;
-  const gh = githubClient(env.GITHUB_TOKEN, env.GITHUB_REPO);
+  const email = normalisiereEmail(felder.email);
+  if (!email) {
+    return respond(isForm, 400, 'Bitte eine gültige E-Mail-Adresse — dorthin geht der Einladungslink.');
+  }
 
+  const db = env.DB as D1Database;
+
+  let bitteId: number;
   try {
-    const offen = await gh.request<{ number: number; title: string }[]>(
-      `/repos/${env.GITHUB_REPO}/issues?state=open&labels=${LABEL}&per_page=100`,
-    );
+    const ergebnis = await bitteInsertStmt(db, {
+      vorname,
+      nachname,
+      email,
+      erstellt: heuteIso(),
+    }).run();
 
-    // «Tim» und «tim» sind dieselbe Bitte — searchKey ist im Projekt genau die
-    // Normalisierung für Vergleiche, die in beide Richtungen treffen müssen.
-    const schonDa = offen.some((issue) => searchKey(issue.title) === searchKey(titel));
-    if (schonDa) return respond(isForm, 200, DANKE);
-
-    if (offen.length >= MAX_OFFEN) {
+    // Der Deckel steht im Statement: keine Zeile heisst «gerade zu viele».
+    if (!ergebnis.meta.changes) {
       return respond(
         isForm,
         429,
         'Es liegen gerade viele Anfragen. Bitte später nochmal — oder frag direkt in der Runde.',
       );
     }
+    bitteId = ergebnis.meta.last_row_id as number;
+  } catch (error) {
+    // Der partielle UNIQUE-Index: Diese Adresse hat schon eine offene Bitte.
+    // Nach draussen ist das kein Fehler, sondern dieselbe Antwort wie beim
+    // ersten Mal — sonst wäre der Endpunkt ein Verzeichnis offener Bitten.
+    if (String(error).includes('UNIQUE')) return respond(isForm, 200, DANKE);
+    console.error('Zugangsbitte liess sich nicht speichern:', error);
+    return respond(isForm, 500, 'Da ist etwas schiefgelaufen. Bitte nochmal versuchen.');
+  }
 
-    await gh.request(`/repos/${env.GITHUB_REPO}/issues`, {
+  // Die Benachrichtigung hält nichts auf: Die Bitte steht, ob das Issue nun
+  // entsteht oder nicht. Dieselbe Bauweise wie bei den Mails in
+  // lib/benachrichtigung.ts.
+  context.waitUntil(benachrichtige(env, db, bitteId, vorname, nachname));
+
+  return respond(isForm, 200, DANKE);
+};
+
+const DANKE =
+  'Danke — die Bitte ist angekommen. Meldet die Runde dich frei, kommt ein Einladungslink ' +
+  'an diese Adresse, und damit legst du dir dein Konto selbst an.';
+
+async function ausFormular(request: Request) {
+  const form = await request.formData();
+  return {
+    vorname: String(form.get('vorname') ?? ''),
+    nachname: String(form.get('nachname') ?? ''),
+    email: String(form.get('email') ?? ''),
+  };
+}
+
+async function ausJson(request: Request) {
+  const body = (await request.json().catch(() => ({}))) as {
+    vorname?: unknown;
+    nachname?: unknown;
+    email?: unknown;
+  };
+  const text = (wert: unknown) => (typeof wert === 'string' ? wert : '');
+  return {
+    vorname: text(body.vorname),
+    nachname: text(body.nachname),
+    email: text(body.email),
+  };
+}
+
+/**
+ * Das Issue ist die Push-Nachricht an die Runde, mehr nicht — gehandelt wird in
+ * der Kontenverwaltung. Die ADRESSE STEHT NICHT DRIN: Gebraucht wird sie nur da,
+ * wo eingeladen wird, und das ist die App. Ein Issue liest man am Handy vor,
+ * leitet es weiter, und es überlebt die Bitte um Jahre.
+ */
+async function benachrichtige(
+  env: Env,
+  db: D1Database,
+  bitteId: number,
+  vorname: string,
+  nachname: string,
+): Promise<void> {
+  if (!env.GITHUB_TOKEN || !env.GITHUB_REPO) {
+    console.warn('Zugangsbitte gespeichert, aber ohne GitHub-Zugangsdaten keine Nachricht.');
+    return;
+  }
+
+  try {
+    const gh = githubClient(env.GITHUB_TOKEN, env.GITHUB_REPO);
+    const issue = await gh.request<{ number: number }>(`/repos/${env.GITHUB_REPO}/issues`, {
       method: 'POST',
       body: JSON.stringify({
-        title: titel,
+        title: `Zugang gewünscht: ${vorname} ${nachname}`,
         // Der Name steht im Codeblock: So wird nichts als Markdown gedeutet,
         // was ein Fremder in das Feld geschrieben hat.
         body: [
-          'Jemand hat auf dem Anmeldebildschirm um Zugang gebeten und diesen Namen angegeben:',
+          'Jemand hat auf dem Anmeldebildschirm um Zugang gebeten:',
           '',
           '```',
-          name,
+          `${vorname} ${nachname}`,
           '```',
           '',
-          'Wenn das jemand aus der Runde ist: Am einfachsten schickt ihm jemand einen',
-          'Einladungslink («Konto» → «Einladungen») — dann legt er das Konto selbst an.',
-          'Sonst Konto anlegen unter «Konten verwalten» und das Startpasswort persönlich',
-          'weitergeben — nicht hier hineinschreiben.',
-          'Wenn nicht: Issue schliessen, damit der Platz wieder frei wird.',
+          'Die Bitte steht mitsamt der angegebenen E-Mail-Adresse in der App unter',
+          '«Konten verwalten» → «Zugangsbitten». Dort geht beides mit einem Klick:',
+          'einen Einladungslink an diese Adresse schicken — dann legt die Person das',
+          'Konto selbst an — oder die Bitte verwerfen.',
           '',
-          'Diese Bitte kommt von einem nicht angemeldeten Besucher. Der angegebene',
-          'Name ist ungeprüft — er sagt nur, wie sich jemand nennt.',
+          'Dieses Issue ist nur die Nachricht und darf jederzeit geschlossen werden;',
+          'es schliesst sich von selbst, sobald jemand die Bitte in der App erledigt.',
+          '',
+          'Die Bitte kommt von einem nicht angemeldeten Besucher. Name und Adresse',
+          'sind ungeprüft — sie sagen nur, wie sich jemand nennt.',
         ].join('\n'),
         labels: [LABEL],
       }),
     });
 
-    return respond(isForm, 200, DANKE);
+    await merkeIssueStmt(db, bitteId, issue.number).run();
   } catch (error) {
+    // Nur ins Log: Der Besucher hat längst «Danke» gelesen, und die Bitte steht.
     if (error instanceof GitHubError) {
       console.error('GitHub-Fehler bei einer Zugangsbitte:', error.status, error.detail);
-      // Nach draussen immer dieselbe, harmlose Auskunft: Ein Fremder soll aus
-      // der Antwort nichts über das Repo oder den Zustand des Tokens lernen.
-      return respond(isForm, 502, 'Das hat gerade nicht geklappt. Bitte später nochmal.');
+      return;
     }
-    console.error('Unerwarteter Fehler bei einer Zugangsbitte:', error);
-    return respond(isForm, 500, 'Da ist etwas schiefgelaufen. Bitte nochmal versuchen.');
+    console.error('Unerwarteter Fehler beim Melden einer Zugangsbitte:', error);
   }
-};
-
-const DANKE = 'Danke — die Bitte ist angekommen. Jemand aus der Runde meldet sich.';
+}
 
 /**
  * Auf eine Zeile eindampfen. Zeilenumbrüche zerlegten den Issue-Titel,

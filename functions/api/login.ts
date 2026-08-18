@@ -9,13 +9,7 @@ import {
   sessionCookieHeader,
 } from '../lib/session';
 import { normalisiereEmail } from '../lib/mail';
-import {
-  DUMMY_HASH,
-  getGuestUser,
-  getUserByEmail,
-  getUserByNameKey,
-  verifyPassword,
-} from '../lib/users';
+import { DUMMY_HASH, getUserByEmail, getUserByNameKey, verifyPassword } from '../lib/users';
 import type { UserRow } from '../lib/users';
 
 /** Bremst Rateversuche aus. Kostet keine CPU-Zeit, nur Wartezeit. */
@@ -37,31 +31,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
 
   let name = '';
   let password = '';
-  let asGuest = false;
   if (isForm) {
     const form = await request.formData();
     name = String(form.get('name') ?? '');
     password = String(form.get('password') ?? '');
-    asGuest = form.get('gast') !== null;
   } else {
     const body = (await request.json().catch(() => ({}))) as {
       name?: unknown;
       password?: unknown;
-      gast?: unknown;
     };
     name = typeof body.name === 'string' ? body.name : '';
     password = typeof body.password === 'string' ? body.password : '';
-    asGuest = body.gast === true;
   }
 
   name = name.trim();
 
-  // «Nur schauen» fragt nach keinem Namen: Hinter dem Gäste-Zugang steht keine
-  // Person, das Passwort ist das ganze Merkmal. Es ist deshalb der einzige Weg
-  // in die App, bei dem ein Name fehlen darf.
-  if (asGuest) {
-    if (!password) return respond(isForm, 400, 'Bitte das Gäste-Passwort eingeben.');
-  } else if (!name || !password) {
+  if (!name || !password) {
     return respond(isForm, 400, 'Bitte Name oder E-Mail und das Passwort eingeben.');
   }
 
@@ -72,25 +57,22 @@ export const onRequestPost: PagesFunction<Env> = async (context) => {
   // kein «@» tragen, denn searchKey wirft alles Nicht-Alphanumerische weg —
   // die beiden Räume können sich also nicht überschneiden. Nötig wurde dieser
   // zweite Weg, als die Namen änderbar wurden: Die Adresse bleibt.
-  const user = asGuest ? await getGuestUser(db) : await findeKonto(db, name);
-  // Zwei getrennte Türen: Über das Namensfeld ist der Gäste-Zugang nicht zu
-  // erreichen, auch nicht, wenn jemand «Gast» eintippt. Sonst hinge derselbe
-  // Zugang an zwei Wegen, und nur einer davon liesse sich zumachen.
-  const usable = user && user.disabled === 0 && (asGuest || user.is_guest === 0) ? user : null;
+  const user = await findeKonto(db, name);
+  // Die Gäste-Zeile ist über das Namensfeld nicht zu erreichen, auch nicht, wenn
+  // jemand «Gast» eintippt. Seit #70 gibt es überhaupt keinen zweiten Weg mehr
+  // zu ihr — die Bedingung bleibt trotzdem stehen: Sie ist das, was den
+  // gesperrten Zustand aus migrations/0012_gast_zu.sql im Code festhält.
+  const usable = user && user.disabled === 0 && user.is_guest === 0 ? user : null;
 
   // Immer GENAU EINE PBKDF2-Prüfung: Gibt es das Konto nicht oder ist es
   // deaktiviert, läuft sie gegen den Dummy-Hash — «unbekannter Name» antwortet
   // dadurch nicht schneller als «falsches Passwort». Und eine einzige, immer
   // gleiche Fehlermeldung, damit die Antwort nicht verrät, welcher Teil falsch war.
-  // Für den Gast gilt dasselbe: Ob noch kein Passwort gesetzt ist, verrät die
-  // Antwort nicht — sonst wüsste ein Fremder, dass hier ein zweiter Weg offen steht.
   const passwordOk = await verifyPassword(password, usable ? usable.password_hash : DUMMY_HASH);
 
   if (!usable || !passwordOk) {
     await new Promise((resolve) => setTimeout(resolve, WRONG_PASSWORD_DELAY_MS));
-    return asGuest
-      ? respond(isForm, 401, 'Das Gäste-Passwort stimmt nicht.', 'gast')
-      : respond(isForm, 401, 'Das stimmt so nicht — bitte nochmal.');
+    return respond(isForm, 401, 'Das stimmt so nicht — bitte nochmal.');
   }
 
   const headers = new Headers({ 'Cache-Control': 'no-store' });
@@ -148,16 +130,11 @@ async function findeKonto(db: D1Database, eingabe: string): Promise<UserRow | nu
 }
 
 /**
- * `bereich` sagt nur dem Anmeldebildschirm ohne JavaScript, welcher der vier
- * Abschnitte offen bleiben und die Meldung tragen soll — sonst stünde der
- * Gäste-Fehler unter dem Namensformular.
+ * Ohne JavaScript ist die neu gerenderte Seite die einzige Rückmeldung. Der
+ * Fehler gehört ans Hauptformular — `bereich` steht deshalb fest auf
+ * «anmelden»; die beiden Nebenwege beantworten ihre Fehler selbst.
  */
-function respond(
-  isForm: boolean,
-  status: number,
-  message: string,
-  bereich: 'anmelden' | 'gast' = 'anmelden',
-): Response {
-  if (isForm) return loginPage({ error: message, status, bereich });
+function respond(isForm: boolean, status: number, message: string): Response {
+  if (isForm) return loginPage({ error: message, status, bereich: 'anmelden' });
   return Response.json({ error: message }, { status, headers: { 'Cache-Control': 'no-store' } });
 }

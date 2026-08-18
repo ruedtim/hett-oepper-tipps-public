@@ -27,6 +27,27 @@ export default function Infos({ onClose, signalChat }: Props) {
       </section>
 
       <section className="infos__part">
+        <h2 className="infos__title">Als App aufs Handy</h2>
+        <p>
+          Die Seite lässt sich auf den Home-Bildschirm legen — eigenes Icon, keine Adressleiste,
+          und die Tipps sind auch ohne Netz lesbar (der Stand vom letzten Besuch, praktisch im
+          Ausland). Ein App-Store ist nicht nötig:
+        </p>
+        <ul className="infos__list">
+          <li>
+            <strong>iPhone und iPad:</strong> Die Seite in Safari öffnen, unten auf das
+            Teilen-Symbol tippen (das Viereck mit dem Pfeil nach oben), dann
+            «Zum Home-Bildschirm».
+          </li>
+          <li>
+            <strong>Android:</strong> Die Seite in Chrome öffnen, oben rechts auf das Menü (⋮)
+            tippen, dann «Zum Startbildschirm hinzufügen» — je nach Handy heisst der Punkt auch
+            «App installieren».
+          </li>
+        </ul>
+      </section>
+
+      <section className="infos__part">
         <h2 className="infos__title">Was du tun kannst</h2>
         <ul className="infos__list">
           <li>
@@ -64,10 +85,15 @@ export default function Infos({ onClose, signalChat }: Props) {
           <li>
             <strong>Leute einladen.</strong> Unter «Konto» liegen drei Einladungslinks für dich.
             Wer einen davon öffnet, legt sich selbst ein Konto an — mit eigenem Namen, eigener
-            Adresse, eigenem Passwort, und niemand muss etwas freischalten. Wem du die Sammlung
-            zeigst, entscheidest du damit selbst; sind deine drei aufgebraucht, kannst du dort
-            neue bestellen. Wer niemanden aus der Runde kennt, bittet auf dem
-            Anmeldebildschirm um Zugang — dann schickt ein Admin den Link.
+            Adresse, eigenem Passwort, und niemand muss etwas freischalten. Wem du zusätzlich aktiven Zugang zu unserer Sammlung
+            gibst, entscheidest du damit selbst.
+          </li>
+          <li>
+            <strong>Liste teilen.</strong> Stell dir per Filter eine Auswahl zusammen und drück
+            «Diese Liste teilen» — der Link zeigt genau diese Tipps auch Leuten ohne Konto, mit
+            deinen eigenen Notizen und Fotos. Anders als eine Einladung gibt er nur diesen
+            Ausschnitt her, und hineinschreiben kann damit niemand. Der Link gilt 90 Tage und
+            lässt sich unter «Konto» einzeln zurückziehen.
           </li>
           <li>
             <strong>Mitdenken.</strong> Du hast einen Vorschlag, was an diesem Projekt geändert

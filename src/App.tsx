@@ -240,20 +240,25 @@ export default function App() {
     navigate('/', query());
   };
   /**
-   * Der Titel führt zurück auf «alles» — und holt dabei den frischen Stand.
+   * Der Titel führt zurück auf «alles» — als echtes Neuladen der Seite (#73).
    *
-   * Ohne das Nachladen täte der Titel auf der ungefilterten Liste gar nichts
-   * (gleicher Hash = kein Sprung), und genau dort drückt man ihn, wenn man
-   * sehen will, ob jemand etwas Neues eingetragen hat.
+   * Vorher lud er nur die Daten nach; was in Komponenten-Zustand wohnt — etwa
+   * ein erzeugter Teilen-Link —, blieb dabei stehen. Das Neuladen räumt alles
+   * ab und holt nebenbei den frischen Stand: Genau dort drückt man den Titel,
+   * wenn man sehen will, ob jemand etwas Neues eingetragen hat.
+   *
+   * `#/` ohne Query IST der Ausgangszustand (Liste, keine Filter) — die Kürzel
+   * lassen Vorgabewerte ohnehin weg. Auf der Liste ersetzt der Sprung den
+   * History-Eintrag (Filterei ist kein Weg, den «zurück» ablaufen soll), von
+   * Unterseiten bleibt er einer — wie bisher.
    */
   const goHome = () => {
-    setThanks(null);
-    setNotice(null);
-    const search = query({ view: 'liste', focus: '' }, EMPTY_FILTERS);
-    if (screen.name === 'liste') replaceSearch('/', search);
-    else navigate('/', search);
-    reload();
-    window.scrollTo({ top: 0 });
+    if (screen.name === 'liste') {
+      window.history.replaceState(null, '', `${window.location.pathname}${window.location.search}#/`);
+    } else {
+      window.location.hash = '#/';
+    }
+    window.location.reload();
   };
   // Nach einer Änderung: zurück zur Liste, und reload() holt den frischen Stand.
   const afterChange = (message: string) => {

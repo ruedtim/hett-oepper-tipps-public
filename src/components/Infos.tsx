@@ -134,8 +134,8 @@ export default function Infos({ onClose, signalChat }: Props) {
             «Gibt&rsquo;s nicht mehr». Löschen ist für Dubletten und Fehleinträge.
           </li>
           <li>
-            <strong>Das bleibt unter uns.</strong> Keine Links und keine Screenshots weitergeben —
-            wer mitlesen soll, bekommt einen Zugang.
+            <strong>Das bleibt unter uns.</strong> Keine Zugangsdaten oder Screenshots weitergeben —
+            wer mitlesen soll, bekommt einen eigenen Zugang oder anonymisierte Tipps als Share-Link.
           </li>
           <li>
             <strong>Lieber eintragen als zögern.</strong> Es geht nichts kaputt, was sich nicht

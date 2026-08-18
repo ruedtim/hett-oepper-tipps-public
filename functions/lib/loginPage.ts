@@ -24,7 +24,7 @@
  * teurer als Nachgiebigkeit.
  */
 
-import { escapeHtml, SEITEN_CSS } from './htmlSeite';
+import { escapeHtml, ICON_LINKS, SEITEN_CSS } from './htmlSeite';
 
 type Bereich = 'anmelden' | 'gast' | 'zugang' | 'vergessen';
 
@@ -60,6 +60,7 @@ export function loginPage(
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
+${ICON_LINKS}
 <title>Hett öpper Tipps?</title>
 <style>${SEITEN_CSS}</style>
 </head>
@@ -123,7 +124,9 @@ export function loginPage(
         <summary>Gib mir bitte Zugang!</summary>
         <form method="post" action="/api/zugang" id="zugang">
           <p class="hint">
-            Sag, wie du heisst — die Runde bekommt eine Nachricht und meldet sich bei dir.
+            Kennst du jemanden aus der Runde? Am schnellsten geht ein Einladungslink — jedes
+            Konto hat drei davon zu vergeben, und damit legst du dir selbst eines an. Sonst:
+            Sag hier, wie du heisst; die Runde bekommt eine Nachricht und meldet sich bei dir.
           </p>
           <input
             type="text" name="name" required maxlength="40"${bereich === 'zugang' ? ' autofocus' : ''}

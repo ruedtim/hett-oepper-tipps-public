@@ -97,6 +97,16 @@ export const onRequest: PagesFunction<Env, string, RequestData> = async (context
     return next();
   }
 
+  // Die Einlöse-Seite eines Einladungslinks (#64): Wer noch kein Konto hat,
+  // kann per Definition keines vorweisen. Exakter Pfad und exakt GET|POST wie
+  // überall — jede andere Methode fiele mangels Handler auf die statischen
+  // Assets durch, am Gate vorbei. Der Token in `?token=` ist die Berechtigung
+  // (100 Bit, einmalig, 90 Tage, widerrufbar), die Function prüft ihn selbst
+  // und vollständig, vor jedem Schreiben UND schon beim Öffnen.
+  if (url.pathname === '/einladung' && (request.method === 'GET' || request.method === 'POST')) {
+    return next();
+  }
+
   // Eine geteilte Tipp-Liste — der einzige Weg, auf dem jemand OHNE Konto etwas
   // aus der Sammlung sieht. Wer den Link hat, hat die Berechtigung; etwas
   // anderes kann es hier nicht geben, denn genau für Leute ohne Passwort ist er

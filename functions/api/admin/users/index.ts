@@ -20,9 +20,22 @@ export const onRequestGet: PagesFunction<Env, string, RequestData> = async ({ en
   // Ohne den Gäste-Zugang: Der ist kein Konto einer Person, hat weder
   // Startpasswort noch Admin-Flag und wird unter /api/admin/gast verwaltet. In
   // dieser Liste stünde er nur da, damit man ihn versehentlich deaktiviert.
+  //
+  // Die E-Mail-Adresse steht seit #64 MIT in der Liste — Entscheid des
+  // Besitzers: Admins sollen sehen können, wie jemand erreichbar ist. Dazu
+  // «eingeladen von»: aufgelöst beim LESEN über die Einladungszeile, die beim
+  // Einlösen dauerhaft stehen bleibt — analog zu den alten Namen daneben.
   const rows = await (env.DB as D1Database)
     .prepare(
-      'SELECT id, name, name_key, alte_namen, is_admin, disabled, must_change_password, created_at FROM users WHERE is_guest = 0 ORDER BY name COLLATE NOCASE',
+      `SELECT u.id, u.name, u.name_key, u.alte_namen, u.is_admin, u.disabled,
+              u.must_change_password, u.created_at, u.email, u.email_verifiziert_am,
+              u.einladungs_budget, u.einladungen_bestellt_am,
+              (SELECT COUNT(*) FROM einladungen WHERE von_id = u.id) AS einladungen_erzeugt,
+              einlader.name AS eingeladen_von
+       FROM users u
+       LEFT JOIN einladungen e ON e.eingeloest_von = u.id
+       LEFT JOIN users einlader ON einlader.id = e.von_id
+       WHERE u.is_guest = 0 ORDER BY u.name COLLATE NOCASE`,
     )
     .all<
       Pick<
@@ -35,7 +48,14 @@ export const onRequestGet: PagesFunction<Env, string, RequestData> = async ({ en
         | 'disabled'
         | 'must_change_password'
         | 'created_at'
-      >
+        | 'email'
+        | 'email_verifiziert_am'
+      > & {
+        einladungs_budget: number;
+        einladungen_bestellt_am: string | null;
+        einladungen_erzeugt: number;
+        eingeladen_von: string | null;
+      }
     >();
 
   return json({
@@ -52,6 +72,15 @@ export const onRequestGet: PagesFunction<Env, string, RequestData> = async ({ en
       disabled: row.disabled === 1,
       mustChangePassword: row.must_change_password === 1,
       createdAt: row.created_at,
+      email: row.email,
+      emailVerifiziert: row.email_verifiziert_am != null,
+      eingeladenVon: row.eingeladen_von,
+      einladungen: {
+        budget: row.einladungs_budget,
+        erzeugt: row.einladungen_erzeugt,
+        verbleibend: Math.max(0, row.einladungs_budget - row.einladungen_erzeugt),
+        bestelltAm: row.einladungen_bestellt_am,
+      },
     })),
   });
 };

@@ -6,13 +6,15 @@ interface Props {
   /** Wo der Nutzer war, als er auf «Rückmeldung» gedrückt hat. */
   from: string;
   onCancel: () => void;
+  /** Beitritts-Link zum Signal-Chat — `null`, wenn keiner konfiguriert ist. */
+  signalChat: string | null;
 }
 
 interface FormValues {
   text: string;
 }
 
-export default function Feedback({ from, onCancel }: Props) {
+export default function Feedback({ from, onCancel, signalChat }: Props) {
   const [draft, setDraft] = useState(() => loadDraft<FormValues>('feedback', { text: '' }));
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -42,7 +44,7 @@ export default function Feedback({ from, onCancel }: Props) {
       <div className="thanks">
         <p className="thanks__mark" aria-hidden="true">✓</p>
         <h1>Angekommen</h1>
-        <p>Deine Rückmeldung ist bei den Admins. Danke fürs Melden.</p>
+        <p>Deine Rückmeldung wird gelesen. Danke fürs Melden.</p>
         <button type="button" className="button" onClick={onCancel}>
           Zurück zu den Tipps
         </button>
@@ -60,8 +62,18 @@ export default function Feedback({ from, onCancel }: Props) {
 
       <h1 className="form__title">Rückmeldung</h1>
       <p className="form__context">
-        Etwas kaputt, unklar oder fehlt? Schreib es hier auf — es landet direkt bei den Admins.
+        Etwas kaputt, unklar oder fehlt? Schreib es hier auf — es wird gelesen.
         Für neue Tipps gibt&rsquo;s den Knopf unten auf der Liste.
+        {signalChat && (
+          <>
+            {' '}
+            Oder direkt mitreden: im{' '}
+            <a href={signalChat} target="_blank" rel="noopener">
+              Signal-Chat
+            </a>
+            .
+          </>
+        )}
       </p>
 
       <label className="field">

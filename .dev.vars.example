@@ -28,6 +28,15 @@ GITHUB_TOKEN=
 # nicht mailen zu können macht nichts auf, es macht nur weniger.
 RESEND_API_KEY=
 
+# Beitritts-Link zum Signal-Chat der Runde (#62). Als Secret statt im Repo oder
+# im Frontend-Bundle — beides ist öffentlich abrufbar, ein Gruppen-Link soll es
+# nicht sein. Er reist über /api/me nur zu Angemeldeten (Gäste: null). Leer
+# lassen heisst: Der Hinweis fehlt einfach, alles andere läuft.
+# WICHTIG: In DIESER Datei in Anführungszeichen setzen — Signal-Links tragen
+# ein «#», und ohne Quotes schneidet der dotenv-Parser dort ab. Das
+# Cloudflare-Secret nimmt den Wert dagegen wörtlich, ohne Quotes.
+SIGNAL_CHAT_URL=""
+
 # Nur nötig, wenn du die lokale Vorschau von einem ANDEREN Gerät aufrufst (Handy
 # im WLAN, also über die LAN-IP statt localhost). `wrangler pages dev` liest die
 # Produktions-Variablen, und dort lässt das Gate ausser localhost nur den

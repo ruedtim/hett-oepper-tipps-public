@@ -226,6 +226,23 @@ body {
   backdrop-filter: blur(6px);
 }
 
+/* Mobil rutscht die Leiste beim Runterscrollen weg und kommt beim
+   Hochscrollen wieder (#63); die Klasse setzt der Scroll-Beobachter in
+   FilterBar.tsx. Er läuft auf jeder Breite — dass die Desktop-Ansicht
+   bleibt, wie sie ist, entscheidet allein diese Media-Query. */
+@media (max-width: 40rem) {
+  .filterbar--weg {
+    transform: translateY(calc(-100% - 8px));
+    pointer-events: none;
+  }
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .filterbar {
+    transition: transform 200ms ease;
+  }
+}
+
 .suchfeld {
   position: relative;
 }
@@ -2087,4 +2104,61 @@ body {
   margin: 0.4rem 0 0.2rem;
   color: var(--ink-soft);
   font-size: 0.78rem;
+}
+
+/* ------------------------------------------------- Einmaliger Hinweis --- */
+
+/* Die Signal-Einladung beim ersten Besuch (#62). Fixiert und über allem, weil
+   sie einmal wirklich gesehen werden soll — die Begründung steht ausführlich
+   in src/components/SignalHinweis.tsx. Über dem Ortswähler (z-index 100), weil
+   sie nur ganz am Anfang erscheint und dann nichts anderes offen ist. */
+.hinweis {
+  position: fixed;
+  inset: 0;
+  z-index: 200;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  background: rgb(0 0 0 / 45%);
+}
+
+.hinweis__box {
+  width: min(23rem, 100%);
+  display: grid;
+  gap: 0.7rem;
+  padding: 1.2rem;
+  border-radius: 18px;
+  background: var(--surface);
+  box-shadow: 0 12px 40px rgb(0 0 0 / 28%);
+}
+
+.hinweis__titel {
+  margin: 0;
+  font-size: 1.1rem;
+  line-height: 1.3;
+}
+
+.hinweis__text {
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+.hinweis__aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-top: 0.2rem;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .hinweis__box {
+    animation: hinweis-auf 160ms ease-out;
+  }
+
+  @keyframes hinweis-auf {
+    from {
+      opacity: 0;
+      transform: translateY(8px);
+    }
+  }
 }

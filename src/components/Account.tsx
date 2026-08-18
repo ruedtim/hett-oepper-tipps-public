@@ -1,16 +1,20 @@
 import { useCallback, useEffect, useState } from 'react';
 import {
   ApiError,
+  bestelleEinladungen,
   changePassword,
   entferneEmail,
+  erstelleEinladung,
+  listeEinladungen,
   listeGeteilte,
   logout,
   setzeBenachrichtigungen,
   setzeEmail,
   umbenennen,
+  widerrufeEinladung,
   widerrufeGeteilte,
 } from '../lib/api';
-import type { GeteilteListe, Me } from '../lib/api';
+import type { Einladung, GeteilteListe, Me } from '../lib/api';
 import { formatDay } from '../lib/dates';
 
 interface Props {
@@ -85,6 +89,47 @@ export default function Account({ me, onClose, onChanged, onVerlauf, onKategorie
       setGeteilte((bisher) => bisher.filter((liste) => liste.id !== id));
     } catch (cause) {
       setTeilenError(cause instanceof ApiError ? cause.message : 'Das hat nicht geklappt.');
+    }
+  }
+
+  const [einladungen, setEinladungen] = useState<Einladung[]>([]);
+  const [einladungenVerbleibend, setEinladungenVerbleibend] = useState(0);
+  const [einladungenBestellt, setEinladungenBestellt] = useState(false);
+  const [einladungBusy, setEinladungBusy] = useState(false);
+  const [einladungError, setEinladungError] = useState<string | null>(null);
+
+  /**
+   * Wie bei den geteilten Listen: eigenes try/catch, eigener Fehlerplatz.
+   * Fehlt die Tabelle aus migrations/0011 auf der Zieldatenbank, kostet das
+   * diesen einen Abschnitt und nicht die ganze Konto-Seite.
+   */
+  const ladeEinladungen = useCallback(() => {
+    if (me?.gast) return;
+    listeEinladungen()
+      .then((antwort) => {
+        setEinladungen(antwort.einladungen);
+        setEinladungenVerbleibend(antwort.verbleibend);
+        setEinladungenBestellt(antwort.bestellt);
+        setEinladungError(null);
+      })
+      .catch((cause: unknown) =>
+        setEinladungError(
+          cause instanceof ApiError ? cause.message : 'Die Einladungen liessen sich nicht laden.',
+        ),
+      );
+  }, [me?.gast]);
+  useEffect(() => ladeEinladungen(), [ladeEinladungen]);
+
+  async function einladungsAktion(was: () => Promise<unknown>) {
+    setEinladungBusy(true);
+    setEinladungError(null);
+    try {
+      await was();
+      ladeEinladungen();
+    } catch (cause) {
+      setEinladungError(cause instanceof ApiError ? cause.message : 'Das hat nicht geklappt.');
+    } finally {
+      setEinladungBusy(false);
     }
   }
 
@@ -420,6 +465,86 @@ export default function Account({ me, onClose, onChanged, onVerlauf, onKategorie
               ))}
             </ul>
           )}
+
+          <h2 className="form__title">Einladungen</h2>
+          <p className="form__context">
+            Hol jemanden in die Runde: Ein Einladungslink lässt eine Person sich selbst ein
+            Konto anlegen — mit Namen, E-Mail und eigenem Passwort. Jeder Link gilt einmal
+            und 90 Tage; jedes Konto hat drei, Widerrufen gibt keinen zurück. Sind sie
+            aufgebraucht, kannst du bei den Admins neue bestellen.
+          </p>
+
+          {einladungError && (
+            <p className="form__error" role="alert">
+              {einladungError}
+            </p>
+          )}
+
+          {einladungen.length > 0 && (
+            <ul className="geteilt">
+              {einladungen.map((einladung) => (
+                <li key={einladung.id} className="geteilt__eintrag">
+                  {einladung.status === 'offen' && (
+                    <input
+                      className="teilenlink__url"
+                      type="text"
+                      readOnly
+                      value={einladung.url}
+                      onFocus={(event) => event.target.select()}
+                      aria-label={`Einladungslink vom ${formatDay(einladung.erstellt)}`}
+                    />
+                  )}
+                  <p className="geteilt__meta">
+                    {einladung.status === 'offen' &&
+                      `erstellt am ${formatDay(einladung.erstellt)} · gilt bis ${formatDay(einladung.bis)}`}
+                    {einladung.status === 'eingeloest' &&
+                      `eingelöst${einladung.eingeloestVon ? ` von ${einladung.eingeloestVon}` : ''}${
+                        einladung.eingeloestAm ? ` am ${formatDay(einladung.eingeloestAm)}` : ''
+                      }`}
+                    {einladung.status === 'widerrufen' && `widerrufen · erstellt am ${formatDay(einladung.erstellt)}`}
+                    {einladung.status === 'abgelaufen' && `abgelaufen am ${formatDay(einladung.bis)}`}
+                  </p>
+                  {einladung.status === 'offen' && (
+                    <button
+                      type="button"
+                      className="linkbutton"
+                      disabled={einladungBusy}
+                      onClick={() => void einladungsAktion(() => widerrufeEinladung(einladung.id))}
+                    >
+                      Widerrufen
+                    </button>
+                  )}
+                </li>
+              ))}
+            </ul>
+          )}
+
+          <p className="form__actions">
+            {einladungenVerbleibend > 0 ? (
+              <button
+                type="button"
+                className="button"
+                disabled={einladungBusy}
+                onClick={() => void einladungsAktion(() => erstelleEinladung())}
+              >
+                Einladung erstellen (noch {einladungenVerbleibend})
+              </button>
+            ) : einladungenBestellt ? (
+              <span className="field__hint">
+                Deine Bestellung liegt bei den Admins — sobald jemand nachfüllt, geht es hier
+                weiter.
+              </span>
+            ) : (
+              <button
+                type="button"
+                className="button"
+                disabled={einladungBusy}
+                onClick={() => void einladungsAktion(() => bestelleEinladungen())}
+              >
+                Mehr Einladungen bestellen
+              </button>
+            )}
+          </p>
 
           <h2 className="form__title">Deine Daten</h2>
           <p className="form__context">

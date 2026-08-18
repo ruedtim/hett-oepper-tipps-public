@@ -213,6 +213,26 @@ export default function UserAdmin({ onClose }: Props) {
           {user.alteNamen.length > 0 && (
             <p className="pending__meta">Früher: {user.alteNamen.join(', ')}</p>
           )}
+          {user.email && (
+            <p className="pending__meta">
+              E-Mail: {user.email}
+              {!user.emailVerifiziert && ' (unbestätigt)'}
+            </p>
+          )}
+          {/* Analog zu «Früher»: Wer die Person hereingeholt hat, steht sonst
+              nirgends — die Einladungszeile bleibt genau dafür stehen. */}
+          {user.eingeladenVon && (
+            <p className="pending__meta">Eingeladen von {user.eingeladenVon}.</p>
+          )}
+          <p className="pending__meta">
+            Einladungen: {user.einladungen.verbleibend} von {user.einladungen.budget} übrig
+            {user.einladungen.bestelltAm && (
+              <>
+                {' '}
+                · <strong>hat mehr Einladungen bestellt</strong>
+              </>
+            )}
+          </p>
           {user.mustChangePassword && !user.disabled && (
             <p className="pending__meta">Startpasswort noch nicht gewechselt.</p>
           )}
@@ -332,6 +352,20 @@ export default function UserAdmin({ onClose }: Props) {
                 }}
               >
                 Umbenennen
+              </button>
+              <button
+                type="button"
+                className="linkbutton"
+                disabled={busyId === user.id}
+                onClick={() =>
+                  void patch(
+                    user,
+                    { mehrEinladungen: true },
+                    `«${user.name}» hat 3 Einladungen dazubekommen.`,
+                  )
+                }
+              >
+                +3 Einladungen
               </button>
             </footer>
           )}

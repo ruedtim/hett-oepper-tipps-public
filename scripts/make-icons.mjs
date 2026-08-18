@@ -151,6 +151,41 @@ function render(size, { maskable = false } = {}) {
   return encodePng(rgb, size);
 }
 
+// ------------------------------------------------------------------- ICO ---
+
+/**
+ * ICO-Container mit eingebetteten PNGs (seit Vista erlaubt, von allen
+ * heutigen Browsern verstanden). Ein eigenes favicon.ico braucht es, weil
+ * Browser und Link-Vorschau-Dienste /favicon.ico blind anfragen, sobald eine
+ * Seite keine Icon-Links trägt — und genau das taten die Seiten vor dem Gate.
+ *
+ * @param {Array<{size: number, png: Buffer}>} bilder
+ */
+function encodeIco(bilder) {
+  const header = Buffer.alloc(6);
+  header.writeUInt16LE(0, 0); // reserviert
+  header.writeUInt16LE(1, 2); // Typ: Icon
+  header.writeUInt16LE(bilder.length, 4);
+
+  const entries = [];
+  let offset = 6 + bilder.length * 16;
+  for (const { size, png } of bilder) {
+    const entry = Buffer.alloc(16);
+    entry[0] = size >= 256 ? 0 : size; // Breite (0 heisst 256)
+    entry[1] = size >= 256 ? 0 : size; // Höhe
+    entry.writeUInt16LE(1, 4); // Farbebenen
+    entry.writeUInt16LE(24, 6); // Bits pro Pixel (RGB ohne Alpha)
+    entry.writeUInt32LE(png.length, 8);
+    entry.writeUInt32LE(offset, 12);
+    entries.push(entry);
+    offset += png.length;
+  }
+
+  return Buffer.concat([header, ...entries, ...bilder.map((b) => b.png)]);
+}
+
+// ------------------------------------------------------------------ Lauf ---
+
 const targets = [
   ['icon-192.png', 192, {}],
   ['icon-512.png', 512, {}],
@@ -163,3 +198,7 @@ for (const [name, size, options] of targets) {
   writeFileSync(join(OUT, name), png);
   console.log(`✔  ${name.padEnd(24)} ${size}×${size}  ${(png.length / 1024).toFixed(1)} KB`);
 }
+
+const ico = encodeIco([32, 16].map((size) => ({ size, png: render(size) })));
+writeFileSync(join(OUT, 'favicon.ico'), ico);
+console.log(`✔  ${'favicon.ico'.padEnd(24)} 32+16     ${(ico.length / 1024).toFixed(1)} KB`);

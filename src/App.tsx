@@ -8,6 +8,7 @@ import FilterBar from './components/FilterBar';
 import History from './components/History';
 import Infos from './components/Infos';
 import RemoveTip from './components/RemoveTip';
+import SignalHinweis from './components/SignalHinweis';
 import SubmitForm from './components/SubmitForm';
 import TeilenKnopf from './components/TeilenKnopf';
 import Thanks from './components/Thanks';
@@ -412,7 +413,7 @@ export default function App() {
   if (screen.name === 'feedback') {
     return (
       <Subpage onHome={goHome}>
-        <Feedback from={cameFrom} onCancel={backToList} />
+        <Feedback from={cameFrom} onCancel={backToList} signalChat={me?.signalChat ?? null} />
       </Subpage>
     );
   }
@@ -420,7 +421,7 @@ export default function App() {
   if (screen.name === 'infos') {
     return (
       <Subpage onHome={goHome}>
-        <Infos onClose={backToList} />
+        <Infos onClose={backToList} signalChat={me?.signalChat ?? null} />
       </Subpage>
     );
   }
@@ -824,7 +825,23 @@ export default function App() {
 
       {/* Konto und die Admin-Wege wohnen seit dem Kopfzeilen-Knopf auf der
           Konto-Seite — ein Footer unter der ganzen Liste war je nach Anzahl
-          Tipps eine halbe Ewigkeit Scrollen entfernt. */}
+          Tipps eine halbe Ewigkeit Scrollen entfernt. Der Signal-Hinweis (#62)
+          darf hier trotzdem stehen: Er ist keine Navigation, die jemand sucht,
+          sondern eine Einladung für die, die ohnehin bis unten lesen. */}
+      {me?.signalChat && (
+        <footer className="sitefoot">
+          <a href={me.signalChat} target="_blank" rel="noopener">
+            Bock mitzureden? Komm in den Signal-Chat.
+          </a>
+        </footer>
+      )}
+
+      {/* Dieselbe Einladung einmalig als Overlay — der Hinweis merkt sich
+          selbst, dass er dran war. Nur auf der Liste: Wer über einen geteilten
+          Tipp-Link hereinkommt, soll nicht als Erstes ein Overlay über dem Tipp
+          sehen, und weil der Merker erst beim ZEIGEN gesetzt wird, geht dabei
+          nichts verloren — er wartet einfach, bis jemand auf der Liste landet. */}
+      {me?.signalChat && <SignalHinweis url={me.signalChat} />}
     </main>
   );
 }

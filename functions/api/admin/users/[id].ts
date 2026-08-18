@@ -1,4 +1,5 @@
 import { json, requireAdmin } from '../../../lib/admin';
+import { NACHSCHUB } from '../../../lib/einladungen';
 import type { Env } from '../../../lib/env';
 import { pruefeNeuenNamen, umbenennungsStmts } from '../../../lib/umbenennen';
 import { getUserById, hashPassword } from '../../../lib/users';
@@ -46,15 +47,41 @@ export const onRequestPatch: PagesFunction<Env, string, RequestData> = async ({
     disabled?: unknown;
     newStartPassword?: unknown;
     neuerName?: unknown;
+    mehrEinladungen?: unknown;
   };
 
   const setAdmin = typeof body.isAdmin === 'boolean' ? body.isAdmin : null;
   const setDisabled = typeof body.disabled === 'boolean' ? body.disabled : null;
   const newStartPassword = typeof body.newStartPassword === 'string' ? body.newStartPassword : null;
   const neuerName = typeof body.neuerName === 'string' ? body.neuerName.trim() : null;
+  const mehrEinladungen = body.mehrEinladungen === true;
 
-  if (setAdmin === null && setDisabled === null && newStartPassword === null && neuerName === null) {
+  if (
+    setAdmin === null &&
+    setDisabled === null &&
+    newStartPassword === null &&
+    neuerName === null &&
+    !mehrEinladungen
+  ) {
     return json({ error: 'Nichts zu ändern.' }, 400);
+  }
+
+  // Einladungen nachfüllen läuft als eigener Ast wie das Umbenennen darunter —
+  // das allgemeine UPDATE trägt den Letzte-Admin-Wächter IM Statement, und den
+  // fasst man für ein Budget-Plus nicht an. Der Klick erledigt auch die offene
+  // Bestellung («hat mehr Einladungen bestellt»), falls eine da ist.
+  if (mehrEinladungen) {
+    if (setAdmin !== null || setDisabled !== null || newStartPassword !== null || neuerName !== null) {
+      return json({ error: 'Einladungen nachfüllen bitte für sich allein, nicht zusammen mit anderem.' }, 400);
+    }
+    await db
+      .prepare(
+        `UPDATE users SET einladungs_budget = einladungs_budget + ?2,
+         einladungen_bestellt_am = NULL WHERE id = ?1`,
+      )
+      .bind(id, NACHSCHUB)
+      .run();
+    return json({ ok: true });
   }
 
   // Umbenennen läuft als eigener Ast und nie zusammen mit etwas anderem: Es ist

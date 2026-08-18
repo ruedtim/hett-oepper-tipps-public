@@ -51,6 +51,18 @@ export interface AdminUser {
   disabled: boolean;
   mustChangePassword: boolean;
   createdAt: string;
+  /** Hinterlegte Adresse — Admins sehen sie seit #64 (Entscheid des Besitzers). */
+  email: string | null;
+  emailVerifiziert: boolean;
+  /** Wer die Person hereingeholt hat — aufgelöst auf den aktuellen Namen. */
+  eingeladenVon: string | null;
+  einladungen: {
+    budget: number;
+    erzeugt: number;
+    verbleibend: number;
+    /** Offene Bestellung («mehr Einladungen, bitte»), null = keine. */
+    bestelltAm: string | null;
+  };
 }
 
 async function call<T>(path: string, init?: RequestInit): Promise<T> {
@@ -102,13 +114,21 @@ export function createUser(payload: { name: string; startPassword: string; isAdm
 }
 
 /**
- * `neuerName` geht nur ALLEIN durch — der Server weist die Mischung mit den
- * anderen Feldern ab, weil Umbenennen ein Batch über zwei Tabellen ist und der
- * Rest ein einzelnes UPDATE mit dem Letzte-Admin-Wächter im Statement.
+ * `neuerName` und `mehrEinladungen` gehen nur ALLEIN durch — der Server weist
+ * die Mischung mit den anderen Feldern ab, weil Umbenennen ein Batch über zwei
+ * Tabellen ist und der Rest ein einzelnes UPDATE mit dem Letzte-Admin-Wächter
+ * im Statement. `mehrEinladungen` gibt dem Konto drei Einladungen dazu und
+ * erledigt eine offene Bestellung.
  */
 export function updateUser(
   id: number,
-  patch: { isAdmin?: boolean; disabled?: boolean; newStartPassword?: string; neuerName?: string },
+  patch: {
+    isAdmin?: boolean;
+    disabled?: boolean;
+    newStartPassword?: string;
+    neuerName?: string;
+    mehrEinladungen?: boolean;
+  },
 ) {
   return send<{ ok: true }>(`/api/admin/users/${id}`, 'PATCH', patch);
 }

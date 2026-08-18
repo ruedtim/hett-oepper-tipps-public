@@ -23,6 +23,13 @@ export interface Env {
   RESEND_API_KEY?: string;
   /** Absender, z. B. «Hett öpper Tipps <tipps@beispiel.example>» (wrangler.toml). */
   MAIL_ABSENDER?: string;
+  /**
+   * Beitritts-Link zum Signal-Chat der Runde (#62). Als Secret und nicht im
+   * Repo oder Frontend-Bundle: Beides ist öffentlich abrufbar (#61), ein
+   * Gruppen-Link soll es nicht sein. Fehlt er, fehlt bloss der Hinweis in der
+   * Oberfläche — darum wie der Mail-Schlüssel NICHT in `missingSecrets()`.
+   */
+  SIGNAL_CHAT_URL?: string;
   /** D1 — der primäre Speicher für Tipps, Konten und Verlauf (wrangler.toml). */
   DB?: D1Database;
   /** R2-Bucket für die Fotobytes (wrangler.toml). */

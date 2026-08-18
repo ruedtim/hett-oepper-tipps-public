@@ -1,3 +1,5 @@
+import { useEffect, useRef, useState } from 'react';
+
 import { countryFlag } from '../lib/countries';
 import { EMPTY_FILTERS, isEmpty, RADIEN } from '../lib/filter';
 import type { CountryOption, Filters, PersonOption, PlaceOption, Sort } from '../lib/filter';
@@ -41,6 +43,37 @@ export default function FilterBar({
   onSortChange,
   closedCount,
 }: Props) {
+  /**
+   * Beim Runterscrollen rutscht die Leiste weg, beim Hochscrollen kommt sie
+   * sofort wieder (#63). Der Zustand wird auf jeder Breite gepflegt; ob er
+   * etwas bewirkt, entscheidet allein die Media-Query im Stylesheet — so
+   * bleibt die Desktop-Ansicht ohne eine zweite Weiche im Code unverändert.
+   */
+  const wurzel = useRef<HTMLDivElement>(null);
+  const [weg, setWeg] = useState(false);
+
+  useEffect(() => {
+    let letztesY = window.scrollY;
+    // Kleine Bewegungen zählen nicht — sonst zittert die Leiste beim
+    // Überscrollen und bei jedem Tipper auf iOS.
+    const SCHWELLE = 8;
+
+    const beiScroll = () => {
+      const y = window.scrollY;
+      const delta = y - letztesY;
+      if (Math.abs(delta) < SCHWELLE) return;
+      letztesY = y;
+      // Wer gerade in der Leiste tippt, behält sie: Das Suchfeld samt
+      // Bildschirmtastatur erzeugt selbst Scrolls.
+      if (wurzel.current?.contains(document.activeElement)) return;
+      // Nahe am Seitenanfang gibt es nichts zu verstecken.
+      setWeg(delta > 0 && y > 80);
+    };
+
+    window.addEventListener('scroll', beiScroll, { passive: true });
+    return () => window.removeEventListener('scroll', beiScroll);
+  }, []);
+
   const toggleCategory = (id: string) => {
     const next = filters.categories.includes(id)
       ? filters.categories.filter((c) => c !== id)
@@ -94,7 +127,7 @@ export default function FilterBar({
   };
 
   return (
-    <div className="filterbar">
+    <div className={weg ? 'filterbar filterbar--weg' : 'filterbar'} ref={wurzel}>
       <SuchFeld
         eintraege={suchEintraege}
         volltextTreffer={volltextTreffer}

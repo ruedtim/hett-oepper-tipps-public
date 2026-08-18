@@ -93,6 +93,16 @@ export function escapeHtml(value: string): string {
 }
 
 /**
+ * Icon-Links für jeden serverseitig gerenderten Kopf — geteilt wie das
+ * Stylesheet und aus demselben Grund. Ohne sie fragt der Browser blind
+ * /favicon.ico an, und Dienste, die gar kein Icon finden, fallen auf
+ * Gecachtes oder Fremdes zurück (#66: der «Bitcoin» von beispiel.example).
+ */
+export const ICON_LINKS = `<link rel="icon" href="/favicon.ico" sizes="32x32">
+<link rel="icon" href="/icon-192.png" type="image/png" sizes="192x192">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">`;
+
+/**
  * Eine schlichte Seite mit demselben Aussehen wie der Anmeldebildschirm.
  * `inhalt` ist fertiges HTML — wer dort Benutzereingaben einsetzt, führt sie
  * durch `escapeHtml`.
@@ -129,6 +139,7 @@ export function htmlSeite({
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <meta name="robots" content="noindex, nofollow">
 <meta name="color-scheme" content="light dark">
+${ICON_LINKS}
 <title>${escapeHtml(titel)}</title>
 <style>${SEITEN_CSS}${zusatzCss}</style>
 </head>

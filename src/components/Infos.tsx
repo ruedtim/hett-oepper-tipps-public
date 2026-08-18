@@ -1,9 +1,11 @@
 interface Props {
   onClose: () => void;
+  /** Beitritts-Link zum Signal-Chat — `null` für Gäste und ohne Konfiguration. */
+  signalChat: string | null;
 }
 
 /** Was die Seite kann, Guidelines und ein paar Worte zum Projekt. */
-export default function Infos({ onClose }: Props) {
+export default function Infos({ onClose, signalChat }: Props) {
   return (
     <div className="form">
       <div className="detail__bar">
@@ -60,18 +62,30 @@ export default function Infos({ onClose }: Props) {
             rückgängig machen. Dein Name kommt automatisch aus deinem Konto.
           </li>
           <li>
-            <strong>Konten eröffnen.</strong> Mit Adminrechten kannst du neue Konten eröffnen für
-            Personen, die Tipps erfassen können — unter «Konto» und dann «Konten verwalten» ganz
-            unten. Die Verantwortung, wem man die Liste schickt und einen Account erstellt, liegt
-            bei den Personen mit Adminrechten.
+            <strong>Leute einladen.</strong> Unter «Konto» liegen drei Einladungslinks für dich.
+            Wer einen davon öffnet, legt sich selbst ein Konto an — mit eigenem Namen, eigener
+            Adresse, eigenem Passwort, und niemand muss etwas freischalten. Wem du die Sammlung
+            zeigst, entscheidest du damit selbst; sind deine drei aufgebraucht, kannst du dort
+            neue bestellen.
           </li>
           <li>
             <strong>Gast.</strong> Als Gast (mit Zugangspasswort) kannst du Tipps ansehen, siehst
             aber keine Fotos und nicht, wer welche Beiträge erstellt hat.
           </li>
           <li>
-            <strong>Mitdenken.</strong> Du hast einen Vorschlag, was an der Homepage geändert werden
-            sollte: Meld dich bei den Admins und denk und entscheide mit.
+            <strong>Mitdenken.</strong> Du hast einen Vorschlag, was an diesem Projekt geändert
+            werden sollte:{' '}
+            {signalChat ? (
+              <>
+                Komm in den{' '}
+                <a href={signalChat} target="_blank" rel="noopener">
+                  Signal-Chat
+                </a>{' '}
+                und denk und entscheide mit.
+              </>
+            ) : (
+              'Sag es in der Runde und denk und entscheide mit.'
+            )}
           </li>
         </ul>
       </section>

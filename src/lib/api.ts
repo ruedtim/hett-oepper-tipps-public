@@ -29,6 +29,12 @@ export interface Me {
   benachrichtigungWuensche: boolean;
   benachrichtigungEigeneTipps: boolean;
   benachrichtigungEigeneWuensche: boolean;
+  /**
+   * Beitritts-Link zum Signal-Chat der Runde. Kommt vom Server statt als
+   * Konstante im Bundle (das ist vor dem Gate abrufbar) und ist für Gäste
+   * `null` — die Stellen, die ihn zeigen, verschwinden dann einfach.
+   */
+  signalChat: string | null;
 }
 
 /** Antwort von /api/account/email. */
@@ -218,6 +224,46 @@ export function listeGeteilte(): Promise<{ listen: GeteilteListe[] }> {
 
 export function widerrufeGeteilte(id: string): Promise<{ ok: true }> {
   return request<{ ok: true }>(`/api/geteilt/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+// ------------------------------------------------------------ Einladungen ---
+
+/** Eine eigene Einladung, wie sie die Konto-Seite auflistet. */
+export interface Einladung {
+  id: string;
+  url: string;
+  /** Tag, an dem der Link erzeugt wurde. */
+  erstellt: string;
+  /** Letzter gültiger Tag — inklusiv, wie bei den Freigabelinks. */
+  bis: string;
+  status: 'offen' | 'eingeloest' | 'widerrufen' | 'abgelaufen';
+  /** Aktueller Name des entstandenen Kontos, wenn eingelöst. */
+  eingeloestVon: string | null;
+  eingeloestAm: string | null;
+}
+
+export interface EinladungenAntwort {
+  einladungen: Einladung[];
+  /** Wie viele Links noch erzeugt werden können (Budget minus je Erzeugte). */
+  verbleibend: number;
+  /** Ob eine Bestellung («mehr Einladungen, bitte») bei den Admins offen ist. */
+  bestellt: boolean;
+}
+
+export function listeEinladungen(): Promise<EinladungenAntwort> {
+  return request<EinladungenAntwort>('/api/einladungen');
+}
+
+export function erstelleEinladung(): Promise<{ ok: true; id: string; url: string; bis: string }> {
+  return post<{ ok: true; id: string; url: string; bis: string }>('/api/einladungen', {});
+}
+
+export function widerrufeEinladung(id: string): Promise<{ ok: true }> {
+  return request<{ ok: true }>(`/api/einladungen/${encodeURIComponent(id)}`, { method: 'DELETE' });
+}
+
+export function bestelleEinladungen(): Promise<{ ok: true; bestellt: boolean }> {
+  return post<{ ok: true; bestellt: boolean }>('/api/einladungen/bestellung', {});
 }
 
 // Der Datenexport braucht hier nichts: Er ist ein <a href download>. Der

@@ -61,9 +61,11 @@ beigesteuert hat, findet ihn unter seinem Namen wieder, und die Karte schreibt d
 «von Tim · ergänzt von Sara» statt eines Treffers, der wie ein Fehler aussieht.
 
 Die Seite ist eine **PWA**: «Zum Home-Bildschirm hinzufügen» macht sie zur App
-mit eigenem Icon. Ein Service Worker (`public/sw.js`) hält Hülle und Bundle
-vor, damit sie auch ohne Netz öffnet — die Tipps selbst brauchen Netz, bewusst
-(warum, steht in `CLAUDE.md`).
+mit eigenem Icon. Ein Service Worker (`public/sw.js`) hält den zuletzt
+geladenen Stand vor — die Tipps lassen sich damit **auch ohne Netz lesen**
+(etwa im Ausland), samt der schon betrachteten Fotos. Ein Banner sagt dann
+ehrlich, von wann der Stand ist; Änderungen brauchen Netz, und mit der
+Abmeldung ist der Vorrat weg. Preis und Begründung stehen in `CLAUDE.md`.
 
 ## Loslegen
 

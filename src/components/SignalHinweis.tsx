@@ -113,7 +113,7 @@ export default function SignalHinweis({ url, onKonto }: Props) {
             <li>
               Du kannst die Seite <strong>als App auf den Home-Bildschirm legen</strong> — im
               Browser-Menü «Zum Home-Bildschirm hinzufügen» wählen. Eigenes Icon, keine
-              Adressleiste, und sie öffnet auch ohne Netz.
+              Adressleiste, und die Tipps sind auch ohne Netz lesbar.
             </li>
             <li>
               Du kannst dich <strong>per Mail informieren lassen</strong>, wenn konkrete Tipps

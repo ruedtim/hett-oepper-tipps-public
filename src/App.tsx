@@ -81,6 +81,9 @@ export default function App() {
   const [me, setMe] = useState<Me | null>(null);
   const [thanks, setThanks] = useState<{ repeated: boolean } | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
+  // Der Zeitpunkt des Datenstands, wenn er offline aus dem Cache kommt — null,
+  // sobald wieder eine frische Antwort da ist.
+  const [offlineStand, setOfflineStand] = useState<string | null>(null);
   const route = useRoute();
 
   // Merkt sich, wo man war, bevor man auf «Rückmeldung» gedrückt hat — sonst
@@ -99,6 +102,11 @@ export default function App() {
     fetch('/api/data')
       .then((response) => {
         if (!response.ok) throw new Error(`HTTP ${response.status}`);
+        // `SW-Stand` setzt der Service Worker, wenn er mangels Netz die letzte
+        // gute Antwort aus seinem Cache serviert — der Wert ist deren
+        // Zeitpunkt. Ein alter Stand ohne Beschriftung wäre eine Lüge, darum
+        // reist der Header bis ins Banner unten.
+        setOfflineStand(response.headers.get('SW-Stand'));
         return response.json() as Promise<AppData>;
       })
       .then((fresh) => {
@@ -717,6 +725,22 @@ export default function App() {
       {notice && (
         <p className="admin__done" role="status">
           {notice}
+        </p>
+      )}
+
+      {/* Ohne diese Zeile sähe ein alter Stand aus wie der aktuelle — das ist
+          die eine Bedingung, unter der es das Offline-Lesen gibt. Der
+          online-Listener oben holt Frisches, sobald das Netz zurück ist. */}
+      {offlineStand && (
+        <p className="admin__done" role="status">
+          Gerade kein Netz — du siehst den Stand vom{' '}
+          {new Date(offlineStand).toLocaleString('de-CH', {
+            day: 'numeric',
+            month: 'long',
+            hour: '2-digit',
+            minute: '2-digit',
+          })}
+          . Änderungen brauchen Netz.
         </p>
       )}
 

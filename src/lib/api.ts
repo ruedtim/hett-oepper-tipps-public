@@ -273,4 +273,21 @@ export async function logout(): Promise<void> {
   // Über den Wrapper, damit «kein Netz» als sichtbare ApiError ankommt statt
   // stumm zu verpuffen (die 204-Antwort hat keinen Body — das fängt der Wrapper ab).
   await request<unknown>('/api/login', { method: 'DELETE' });
+
+  // Der Offline-Vorrat des Service Workers (public/sw.js) gehört zur Sitzung
+  // und stirbt mit ihr — wer sich auf einem geteilten Gerät abmeldet, lässt
+  // keine lesbaren Tipps zurück. Über das Präfix statt über den vollen Namen,
+  // damit ein Versions-Sprung im Worker diese Stelle nicht überholt. Hülle und
+  // Bundle bleiben stehen: Code, keine Daten.
+  try {
+    const namen = await caches.keys();
+    await Promise.all(
+      namen
+        .filter((name) => name.startsWith('daten-') || name.startsWith('fotos-'))
+        .map((name) => caches.delete(name)),
+    );
+  } catch {
+    // Kein Cache-Zugriff (alter Browser, gesperrter Speicher): Dann gab es
+    // auch keinen Vorrat, der zu löschen wäre.
+  }
 }

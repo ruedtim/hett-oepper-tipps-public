@@ -35,7 +35,7 @@ export default function Infos({ onClose, signalChat }: Props) {
         </p>
         <ul className="infos__list">
           <li>
-            <strong>iPhone und iPad:</strong> Die Seite in Safari öffnen, unten auf das
+            <strong>iPhone:</strong> Die Seite in Safari öffnen, unten auf das
             Teilen-Symbol tippen (das Viereck mit dem Pfeil nach oben), dann
             «Zum Home-Bildschirm».
           </li>

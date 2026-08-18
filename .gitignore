@@ -1,0 +1,14 @@
+node_modules/
+dist/
+.DS_Store
+*.local
+
+# Vom Build erzeugt — niemals committen
+public/data.json
+
+# Lokale Secrets für `wrangler pages dev`
+.dev.vars
+.wrangler/
+
+# Automatische Sicherung von scripts/restore-to-d1.mjs — lokal behalten, nie committen
+backup-vor-restore-*.sql

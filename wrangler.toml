@@ -1,0 +1,68 @@
+# Cloudflare-Pages-Konfiguration.
+#
+# Seit diese Datei existiert, ist SIE die Quelle für Bindings und
+# Klartext-Variablen — im Dashboard gepflegte gelten nicht mehr. VERSCHLÜSSELTE
+# Secrets (SESSION_SECRET, GITHUB_TOKEN, BACKUP_TOKEN) sind davon nicht
+# betroffen: Sie haben hier bewusst keinen Platz und bleiben im Dashboard unter
+# «Variables and Secrets → Encrypt» bzw. lokal in .dev.vars.
+#
+# `wrangler pages dev dist` liest die Datei und simuliert D1 und R2 lokal
+# (Zustand unter .wrangler/state). Lokale Migrationen:
+#   npx wrangler d1 migrations apply hett-oepper-tipps --local
+
+name = "hett-oepper-tipps"
+pages_build_output_dir = "dist"
+compatibility_date = "2026-07-26"
+
+# Produktions-Bindings.
+[[d1_databases]]
+binding = "DB"
+database_name = "hett-oepper-tipps"
+database_id = "00000000-0000-4000-8000-000000000001"
+
+[[r2_buckets]]
+binding = "FOTOS"
+bucket_name = "hett-oepper-fotos"
+
+# Der Repo-Name ist kein Geheimnis (er steht ohnehin im Repo) und gehört
+# deshalb hierher statt ins Dashboard — eine dort gepflegte Klartext-Variable
+# würde von dieser Datei verdrängt, und der Rückmeldungs-Knopf antwortete
+# fortan still mit 503.
+[vars]
+GITHUB_REPO = "ruedtim/hett-oepper-tipps"
+
+# Absender der Mails (Passwort-Reset, Bestätigung, Benachrichtigungen). Kein
+# Geheimnis, also hierher — der Schlüssel dazu (RESEND_API_KEY) bleibt im
+# Dashboard. Die Domain muss bei Resend verifiziert sein, sonst weist der Dienst
+# den Versand ab. Fehlt einer von beiden, antworten die E-Mail-Endpunkte mit 503
+# und Benachrichtigungen entfallen still — die Seite läuft weiter.
+MAIL_ABSENDER = "Hett öpper Tipps <zeugs@beispiel.example>"
+
+# Sagt dem Gate, wie streng es mit dem Hostnamen sein soll: In der Produktion
+# antworten nur der kanonische Name und der mitwandernde Projekt-Alias, damit die
+# ewigen `<hash>.pages.dev`-Adressen alter Deployments nicht weiter auf die echte
+# Datenbank zeigen (Begründung in functions/lib/hosts.ts). Im Preview darf jede
+# Adresse antworten — dort hängt die Preview-Datenbank dran.
+UMGEBUNG = "produktion"
+
+# Preview-Deployments bekommen eine EIGENE Datenbank und einen eigenen Bucket:
+# Ein Branch-Deployment darf nie in die Produktionsdaten schreiben.
+#
+# Achtung, Cloudflare-Regel: `vars`, `d1_databases` und `r2_buckets` werden
+# NICHT von der Produktion geerbt. Wer eines davon hier überschreibt, muss alle
+# wiederholen — sonst fehlen sie im Preview ersatzlos.
+[env.preview]
+
+[[env.preview.d1_databases]]
+binding = "DB"
+database_name = "hett-oepper-tipps-preview"
+database_id = "00000000-0000-4000-8000-000000000002"
+
+[[env.preview.r2_buckets]]
+binding = "FOTOS"
+bucket_name = "hett-oepper-fotos-preview"
+
+[env.preview.vars]
+GITHUB_REPO = "ruedtim/hett-oepper-tipps"
+UMGEBUNG = "preview"
+MAIL_ABSENDER = "Hett öpper Tipps <zeugs@beispiel.example>"

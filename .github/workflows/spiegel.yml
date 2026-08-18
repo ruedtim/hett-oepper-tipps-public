@@ -1,0 +1,153 @@
+name: Öffentlicher Spiegel
+
+# Schreibt den Code — und nur den Code — nach ruedtim/hett-oepper-tipps-public.
+# Der Spiegel WÄCHST: Jeder Lauf hängt einen Schnappschuss-Commit an main an,
+# nie ein Force-Push. Das heisst auch: Was einmal draussen ist, bleibt draussen.
+# Die einzige Tür davor ist der Wächter in scripts/spiegel.mjs — deshalb wird
+# hier erst gebaut und geprüft und der Spiegel danach überhaupt erst geklont.
+#
+# Einmalig einzurichten (nur der Besitzer):
+#   - Repo ruedtim/hett-oepper-tipps-public: PUBLIC, LEER (kein README, keine
+#     Lizenz), dort Settings → Actions → «Disable actions». Nie ein
+#     Cloudflare-Pages-Projekt anhängen.
+#   - Secret SPIEGEL_TOKEN in DIESEM Repo: Fine-grained PAT, «Only select
+#     repositories» → nur hett-oepper-tipps-public, Berechtigungen «Contents:
+#     Read and write» UND «Workflows: Read and write». Ohne die zweite weist
+#     GitHub jeden Push zurück, der .github/workflows/ anfasst — und dieser
+#     Workflow fasst sie bei jedem Lauf an.
+#   - Ablaufdatum des Tokens in ops/expiries.json eintragen.
+
+on:
+  push:
+    branches: [main]
+    # Was nicht gespiegelt wird, muss auch keinen Lauf auslösen. Der nächtliche
+    # Backup-Commit fasst nur data/ und public/photos/ an — er löst mit dem
+    # Actions-Token ohnehin keine Workflows aus, aber diese Zeilen halten das
+    # auch dann, wenn das Backup je auf einen PAT umgestellt wird.
+    #
+    # ops/ steht hier bewusst NICHT, obwohl es nicht gespiegelt wird: Dort liegt
+    # ops/spiegel.json, und eine Änderung an der Ersetzungstabelle ändert, was
+    # hinausgeht. Sie muss also einen Lauf auslösen.
+    paths-ignore:
+      - 'data/**'
+      - 'public/photos/**'
+      - 'CLAUDE.md'
+  workflow_dispatch:
+
+permissions:
+  contents: read # Dieses Repo wird nur gelesen. Geschrieben wird ausschliesslich
+  issues: write #  im Spiegel, und dafür braucht es SPIEGEL_TOKEN.
+
+# Kein cancel-in-progress: Läufe reihen sich auf, und der letzte spiegelt
+# ohnehin den neuesten Stand. Ein abgebrochener Lauf hinterlässt nichts, ein
+# übersprungener Push wäre eine Lücke.
+concurrency:
+  group: spiegel
+
+env:
+  SPIEGEL_REPO: ruedtim/hett-oepper-tipps-public
+
+jobs:
+  spiegeln:
+    # Läuft nur im privaten Repo — der Spiegel bekommt diese Datei mit und soll
+    # nicht seinerseits zu spiegeln versuchen.
+    if: github.repository == 'ruedtim/hett-oepper-tipps'
+    runs-on: ubuntu-latest
+    steps:
+      # Volle Tiefe braucht es nicht: spiegel.mjs liest den Arbeitsbaum, nicht
+      # die Historie.
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+
+      # Kein `npm ci`: Das Skript kommt mit Node-Bordmitteln aus. Der Spiegel
+      # soll nicht an einer kaputten Abhängigkeit hängen — und ein node_modules/
+      # neben dem Bauplatz wäre nur eine weitere Sache, die man heraushalten
+      # müsste.
+      #
+      # Gebaut wird nach RUNNER_TEMP, NICHT in den Klon: Erst wenn der Wächter
+      # geschwiegen hat, wird der Spiegel angefasst.
+      - name: Spiegel-Baum bauen und prüfen
+        run: node scripts/spiegel.mjs "$RUNNER_TEMP/spiegel-baum"
+
+      - name: Spiegel klonen
+        env:
+          SPIEGEL_TOKEN: ${{ secrets.SPIEGEL_TOKEN }}
+        run: |
+          # --depth 1: Der Spiegel wächst mit jedem Lauf, der Klon soll das
+          # nicht. Ein Push aus einem flachen Klon ist erlaubt, solange der neue
+          # Commit ein direkter Nachfahre der Gegenstelle ist — genau das ist er.
+          git clone --depth 1 \
+            "https://x-access-token:$SPIEGEL_TOKEN@github.com/$SPIEGEL_REPO.git" \
+            "$RUNNER_TEMP/spiegel"
+          cd "$RUNNER_TEMP/spiegel"
+          # Erster Lauf: Ein frisch angelegtes, leeres Repo lässt sich klonen,
+          # aber HEAD hängt an einem Branch, den es noch nicht gibt. `git commit`
+          # funktioniert dann, `git rev-parse HEAD` nicht — daran erkennt man den
+          # Fall.
+          if git rev-parse --verify HEAD >/dev/null 2>&1; then
+            echo "Spiegel steht auf $(git rev-parse --short HEAD)."
+          else
+            echo "Spiegel ist leer — erster Lauf."
+            git checkout -b main
+          fi
+
+      - name: Arbeitsbaum ersetzen
+        run: |
+          cd "$RUNNER_TEMP/spiegel"
+          # Alles ausser .git weg. Ohne diesen Schritt überlebte eine Datei, die
+          # im privaten Repo gelöscht wurde, für immer im Spiegel. -mindepth 1
+          # lässt den Ordner selbst stehen, ! -name .git die Repo-Innereien samt
+          # Gegenstelle und Token.
+          find . -mindepth 1 -maxdepth 1 ! -name .git -exec rm -rf {} +
+          # Der Punkt am Ende der Quelle nimmt auch .github/ und .gitignore mit.
+          cp -a "$RUNNER_TEMP/spiegel-baum/." .
+
+      - name: Nur bei Änderungen committen
+        env:
+          SPIEGEL_TOKEN: ${{ secrets.SPIEGEL_TOKEN }}
+        run: |
+          cd "$RUNNER_TEMP/spiegel"
+          # -f, damit die mitgespiegelte .gitignore keine Datei verschluckt, die
+          # im privaten Repo mit `git add -f` erzwungen wurde. Im Bauplatz liegt
+          # ausschliesslich, was spiegel.mjs hingelegt hat — hier kann -f nichts
+          # Ungewolltes einsammeln.
+          git add -A -f
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen — kein Commit."
+            exit 0
+          fi
+          # Autor wie im Backup-Job: Der Commit stammt von der Maschine, nicht
+          # von der Person, der der Token gehört.
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -q \
+                -m "Stand ${GITHUB_SHA:0:7} ($(date -u +%F))" \
+                -m "Automatisch erzeugt aus dem privaten Repo, Commit $GITHUB_SHA. Änderungen direkt in diesem Repo überschreibt der nächste Lauf."
+          # HEAD:main statt nur main — deckt auch den Fall ab, dass GitHub das
+          # leere Repo mit einem anders benannten Standard-Branch angelegt hat.
+          git push origin HEAD:main
+          echo "Gespiegelt: $(git rev-parse --short HEAD)"
+
+      # Gleiche Mechanik wie backup.yml und expiry-check.yml: ein Issue, kein
+      # Dauerfeuer.
+      - name: Bei Fehlschlag Issue öffnen
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$(gh issue list --label spiegel --state open --json number --jq '.[0].number')" ]; then
+            echo "Es ist bereits ein Issue offen."
+            exit 0
+          fi
+          gh label create spiegel --color 1D76DB --description 'Probleme mit dem öffentlichen Code-Spiegel' 2>/dev/null || true
+          gh issue create \
+            --title 'Spiegelung ins öffentliche Repo fehlgeschlagen' \
+            --label spiegel \
+            --body "Lauf: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID — Details im Log. Solange dieses Issue offen ist, meldet sich kein weiteres.
+
+          Der Spiegel steht unverändert auf dem letzten erfolgreichen Stand, und es ist nichts Privates hinausgegangen: Gebaut und geprüft wird in einem Wegwerf-Ordner, angefasst wird der Spiegel erst danach.
+
+          Häufigste Ursachen: Der Wächter hat etwas gefunden (Exit 2), die Ersetzungstabelle ist verrottet (Exit 3), oder SPIEGEL_TOKEN ist abgelaufen bzw. hat die Berechtigung «Workflows: Read and write» nicht."

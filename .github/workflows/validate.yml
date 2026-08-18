@@ -1,0 +1,47 @@
+name: Daten prüfen
+
+# Läuft bei Pull Requests UND bei Pushes auf main. Beides ist nötig: Die PRs
+# fangen eingereichte Vorschläge ab, die Pushes die von Hand vorgenommenen
+# Änderungen an data/ — und genau dort passiert der Fehler, den sonst niemand
+# bemerkt, bis der Cloudflare-Build rot wird.
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+jobs:
+  validate:
+    # Läuft nur im privaten Repo. Im öffentlichen Spiegel fehlt data/ —
+    # `npm run validate` prüft genau diesen Bestand und stünde dort für
+    # immer rot. Ein Repo-Schalter «Actions deaktivieren» täte dasselbe,
+    # steht aber in keinem Diff; diese Zeile ist les- und prüfbar.
+    if: github.repository == 'ruedtim/hett-oepper-tipps'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Prüft Schema, Ordnername gegen ID, Kleinschreibung, Kategorie-Referenzen
+      # und ob jedes genannte Foto wirklich existiert.
+      - name: Daten validieren
+        run: npm run validate
+
+      - name: Typen und Build prüfen
+        run: npm run build
+
+      # Ein Fine-grained PAT im Repo wäre ein stiller Totalschaden. Der Worker
+      # bekommt seinen Token aus den Cloudflare-Secrets, hier hat keiner etwas
+      # zu suchen.
+      - name: Auf versehentlich eingecheckte Zugangsdaten prüfen
+        run: |
+          if git grep -nIE '(github_pat_[A-Za-z0-9_]{20,}|ghp_[A-Za-z0-9]{30,}|gho_[A-Za-z0-9]{30,}|BEGIN [A-Z ]*PRIVATE KEY)' -- . ':!.github/workflows/validate.yml'; then
+            echo "::error::Zugangsdaten im Repo gefunden. Sofort widerrufen und aus der History entfernen."
+            exit 1
+          fi
+          echo "Keine Zugangsdaten gefunden."

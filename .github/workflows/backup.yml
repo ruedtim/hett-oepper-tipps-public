@@ -1,0 +1,100 @@
+name: Tägliches Backup (D1 → Repo)
+
+# Der eine Weg, auf dem Daten von der Datenbank ins Repo fliessen — strikt
+# einweg. Die Gegenrichtung (Repo → Datenbank) hat absichtlich keinen
+# Automatismus; sie geht nur von Hand über scripts/restore-to-d1.mjs.
+#
+# Voraussetzungen (einmalig, Besitzer):
+#   - Secret  BACKUP_TOKEN  (Settings → Secrets → Actions), gleicher Wert wie
+#     das Cloudflare-Secret BACKUP_TOKEN
+#   - Variable APP_URL      (Settings → Variables → Actions), z. B.
+#     https://tipps.example.ch — ohne Schrägstrich am Ende
+
+on:
+  schedule:
+    # 03:17 UTC — krumme Minute, GitHub drosselt Läufe zur vollen Stunde.
+    # Geplante Workflows werden in privaten Repos nicht nach 60 Tagen
+    # Inaktivität abgeschaltet — das passiert nur öffentlichen.
+    - cron: '17 3 * * *'
+  workflow_dispatch:
+    inputs:
+      force:
+        description: 'Schrumpf-Wächter übersteuern (nach absichtlichen grossen Löschaktionen)'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  issues: write
+
+concurrency:
+  group: backup
+
+jobs:
+  backup:
+    # Läuft nur im privaten Repo. Der öffentliche Spiegel bekommt diese
+    # Datei mit, hat dort aber weder BACKUP_TOKEN noch etwas zu sichern.
+    if: github.repository == 'ruedtim/hett-oepper-tipps'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version: '24'
+          cache: npm
+
+      - run: npm ci
+
+      # Ersetzt data/ vollständig und gleicht public/photos/ per md5-Manifest
+      # ab. Der Schrumpf-Wächter im Skript bricht ab, wenn der Export leer ist
+      # oder >30 % unter dem Repo-Stand liegt — damit eine leergelaufene
+      # Datenbank nie das Backup leert.
+      - name: Export abholen
+        env:
+          BACKUP_TOKEN: ${{ secrets.BACKUP_TOKEN }}
+          EXPORT_URL: ${{ vars.APP_URL }}/api/export
+          FORCE: ${{ inputs.force }}
+        run: node scripts/fetch-backup.mjs
+
+      # Dasselbe Netz, das auch Pull Requests prüft: Schemas, Ordnername = ID,
+      # Kategorie-Referenzen, Foto-Existenz. Ein kaputter Export wird gar nicht
+      # erst committet.
+      - name: Backup validieren
+        run: npm run validate
+
+      # «[CF-Pages-Skip]» muss PRÄFIX sein, sonst ignoriert Cloudflare es.
+      # Bewusst nicht «[skip ci]» — das würde auch GitHub-Actions-Workflows
+      # unterdrücken. Pushes mit dem Actions-Token lösen ohnehin keine
+      # weiteren Workflows aus (Rekursionsschutz); deshalb validiert dieser
+      # Job selbst, statt sich auf validate.yml zu verlassen.
+      # Sollte main je Branch-Protection bekommen, braucht dieser Workflow
+      # eine Bypass-Ausnahme (oder einen PAT).
+      - name: Nur bei Änderungen committen
+        run: |
+          git add -A data
+          git add -A public/photos 2>/dev/null || true
+          if git diff --cached --quiet; then
+            echo "Keine Änderungen — kein Commit."
+            exit 0
+          fi
+          git -c user.name='github-actions[bot]' \
+              -c user.email='41898282+github-actions[bot]@users.noreply.github.com' \
+              commit -m "[CF-Pages-Skip] Backup: Stand $(date -u +%F)"
+          git push
+
+      # Gleiche Mechanik wie expiry-check.yml: ein Issue, kein Dauerfeuer.
+      - name: Bei Fehlschlag Issue öffnen
+        if: failure()
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          if [ -n "$(gh issue list --label backup --state open --json number --jq '.[0].number')" ]; then
+            echo "Es ist bereits ein Issue offen."
+            exit 0
+          fi
+          gh label create backup --color D93F0B --description 'Probleme mit dem täglichen Backup' 2>/dev/null || true
+          gh issue create \
+            --title 'Tägliches Backup fehlgeschlagen' \
+            --label backup \
+            --body "Lauf: $GITHUB_SERVER_URL/$GITHUB_REPOSITORY/actions/runs/$GITHUB_RUN_ID — Details im Log. Solange dieses Issue offen ist, meldet sich kein weiteres. Das Backup vom Vortag ist unberührt."

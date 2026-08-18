@@ -1,0 +1,65 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "wunsch.schema.json",
+  "title": "Wünsche (offene Gesuche nach Tipps)",
+  "description": "Eine Datei statt eines Ordners pro Eintrag, anders als bei den Tipps: Wünsche sind wenige und kurzlebig, und die Merge-Konflikte paralleler PRs, für die es die Ordnerstruktur gab, existieren seit der D1-Umstellung nicht mehr. Die Datei fehlt, solange noch nie ein Wunsch angebracht wurde.",
+  "type": "array",
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "required": ["schema", "id", "von", "land", "kategorien", "bis", "erstellt"],
+    "properties": {
+      "schema": { "type": "integer", "const": 1 },
+      "id": {
+        "type": "string",
+        "minLength": 8,
+        "maxLength": 40,
+        "description": "UUID. Kein Slug wie bei den Tipps — ein Wunsch wird nie verlinkt."
+      },
+      "von": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 60,
+        "description": "Kontoname. Wer erfüllen und löschen darf, entscheidet searchKey(von) gegen users.name_key."
+      },
+      "land": { "type": "string", "pattern": "^[A-Z]{2}$" },
+      "ort": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 80,
+        "description": "Optional: Fehlt, wenn der Wunsch dem ganzen Land gilt («irgendwas in Portugal»)."
+      },
+      "kategorien": {
+        "type": "array",
+        "maxItems": 5,
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "description": "Darf leer sein, anders als bei einem Tipp: Wer nur «irgendwas in Lissabon» sucht, soll nicht raten müssen."
+      },
+      "text": { "type": "string", "maxLength": 1000 },
+      "bis": {
+        "type": "string",
+        "format": "date",
+        "description": "Letzter gültiger Tag, inklusiv. Am Tag danach verschwindet der Wunsch."
+      },
+      "erstellt": { "type": "string", "format": "date" },
+      "erfuellt": {
+        "type": "object",
+        "additionalProperties": false,
+        "required": ["am", "von"],
+        "properties": {
+          "am": { "type": "string", "format": "date" },
+          "von": { "type": "string", "minLength": 1, "maxLength": 60 }
+        },
+        "description": "Fehlt, solange der Wunsch offen ist. «von» kann ein Admin sein, nicht nur die Autorin."
+      },
+      "tipps": {
+        "type": "array",
+        "minItems": 1,
+        "uniqueItems": true,
+        "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" },
+        "description": "IDs der zugeordneten Tipps, aufsteigend sortiert. Nötig, weil der Ortsfilter nur exakte Ortsnamen trifft — ein Wunsch für «Thurgau» findet den Tipp in Frauenfeld nie von allein. Fehlt, wenn keine Zuordnung besteht."
+      }
+    }
+  }
+}

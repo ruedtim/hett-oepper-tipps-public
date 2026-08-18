@@ -1,0 +1,34 @@
+{
+  "name": "hett-oepper-tipps",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Reisetipps-Sammlung für den Freundeskreis",
+  "scripts": {
+    "dev": "vite",
+    "build": "npm run test && tsc --noEmit && tsc --noEmit -p functions && vite build",
+    "typecheck": "tsc --noEmit && tsc --noEmit -p functions",
+    "preview:cf": "npm run build && wrangler pages dev dist",
+    "preview": "vite preview",
+    "db:migrate": "wrangler d1 migrations apply hett-oepper-tipps --local",
+    "validate": "node scripts/build-data.mjs",
+    "test": "node --test shared/*.test.mjs"
+  },
+  "dependencies": {
+    "leaflet": "^1.9.4",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@cloudflare/workers-types": "^5.20260726.1",
+    "@types/leaflet": "^1.9.21",
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "@vitejs/plugin-react": "^5.0.0",
+    "ajv": "^8.17.1",
+    "ajv-formats": "^3.0.1",
+    "typescript": "^5.9.0",
+    "vite": "^7.0.0",
+    "wrangler": "^4.114.0"
+  }
+}

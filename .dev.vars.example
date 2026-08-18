@@ -1,0 +1,46 @@
+# Kopieren nach .dev.vars (gitignored) für lokale Tests mit `npm run preview:cf`.
+# In der Cloud stehen dieselben Werte unter
+# Cloudflare Pages → Settings → Environment variables — verschlüsselt und
+# für Production UND Preview gesetzt.
+# Die D1-/R2-Bindings kommen NICHT von hier, sondern aus wrangler.toml.
+
+# 32 zufällige Bytes, signiert die Sitzungs-Cookies.
+# Neu erzeugen mit:  openssl rand -base64 32
+SESSION_SECRET=lokal-nur-zum-testen-nicht-verwenden
+
+# Bearer-Token des täglichen Backup-Jobs (kann nur lesen). Derselbe Wert muss
+# als GitHub-Actions-Secret BACKUP_TOKEN hinterlegt sein.
+BACKUP_TOKEN=lokal-nur-zum-testen
+
+# Fine-grained PAT, nur für dieses Repo — seit der D1-Umstellung nur noch für
+# die zwei Endpunkte, die Issues schreiben (Issues: write): Rückmeldungen und
+# Bitten um Zugang. GITHUB_REPO steht nicht hier, sondern als Klartext-Variable
+# in wrangler.toml — es ist kein Geheimnis. Leer lassen heisst: Beide Endpunkte
+# antworten mit 503, alles andere läuft.
+GITHUB_TOKEN=
+
+# API-Schlüssel von Resend, für Passwort-Reset, E-Mail-Bestätigung und
+# Benachrichtigungen. Die Absenderadresse steht als Klartext-Variable
+# MAIL_ABSENDER in wrangler.toml (in BEIDEN Blöcken — Cloudflare vererbt vars
+# nicht in die Preview-Umgebung). Leer lassen heisst: «Passwort vergessen» und
+# das Adressfeld auf der Konto-Seite antworten mit 503, Benachrichtigungen
+# entfallen still, alles andere läuft. Bewusst NICHT in missingSecrets() —
+# nicht mailen zu können macht nichts auf, es macht nur weniger.
+RESEND_API_KEY=
+
+# Nur nötig, wenn du die lokale Vorschau von einem ANDEREN Gerät aufrufst (Handy
+# im WLAN, also über die LAN-IP statt localhost). `wrangler pages dev` liest die
+# Produktions-Variablen, und dort lässt das Gate ausser localhost nur den
+# kanonischen Namen und den Projekt-Alias antworten — jede andere Adresse bekommt
+# 404 (Begründung in functions/lib/hosts.ts). Diese Zeile hebt das lokal auf.
+# UMGEBUNG=preview
+
+# Konten und Tipps liegen in D1. Lokal einrichten:
+#   npm run db:migrate
+#   node scripts/hash-password.mjs "Tim" --admin --fertig
+#     → den ausgegebenen INSERT mit dem angezeigten --local-Befehl einspielen
+#   node scripts/restore-to-d1.mjs        # Tipps aus data/ in die lokale DB
+#
+# Der Gäste-Zugang («nur schauen») kommt aus der Migration gesperrt und ohne
+# brauchbares Passwort. Aufmachen nur über die Oberfläche: als Admin anmelden →
+# «Konten verwalten» → «Nur schauen» → Passwort setzen.

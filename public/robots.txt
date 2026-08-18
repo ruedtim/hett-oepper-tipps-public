@@ -1,0 +1,4 @@
+# Hinter dem Passwort kommt sowieso kein Crawler durch. Das hier ist das Netz
+# darunter, falls der Zugang je gelockert wird.
+User-agent: *
+Disallow: /

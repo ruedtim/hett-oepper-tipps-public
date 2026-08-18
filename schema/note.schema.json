@@ -1,0 +1,24 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "note.schema.json",
+  "title": "Notiz zu einem Tipp",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["id", "by", "text", "added"],
+  "properties": {
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "maxLength": 80,
+      "description": "Identisch mit dem Dateinamen ohne .json, üblich: JJJJ-MM-TT-name."
+    },
+    "by": { "type": "string", "minLength": 1, "maxLength": 40 },
+    "text": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "photo": {
+      "type": ["string", "null"],
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*\\.(webp|jpg)$",
+      "description": "Dateiname in public/photos/<tip-id>/. Nur der Name, nie ein Pfad."
+    },
+    "added": { "type": "string", "format": "date" }
+  }
+}

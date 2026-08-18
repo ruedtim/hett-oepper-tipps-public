@@ -1,0 +1,16 @@
+-- Benachrichtigung, wenn jemand auf den eigenen Wunsch antwortet.
+--
+-- Die dritte und letzte der drei Nachrichten, und die wertvollste: Man hat eine
+-- Frage gestellt, jemand beantwortet sie. Genau dafür ist ein Wunsch da.
+--
+-- Ein eigener Schalter und nicht `benachrichtigung_eigene_tipps` mitbenutzt: Das
+-- sind zwei verschiedene Ereignisse («jemand ergänzt einen Tipp, an dem ich
+-- beteiligt bin» gegen «jemand hat einen Tipp für meinen Wunsch»), und ein
+-- Kreuzchen, dessen Beschriftung zwei Dinge meint, ist eine Beschriftung, die
+-- lügt.
+--
+-- Standardmässig AN, wie beim Tipp-Schalter daneben und aus demselben Grund:
+-- Es geht nur um die eigenen Sachen, greift ohnehin erst mit bestätigter
+-- Adresse, und es ist genau die Nachricht, die man erwartet. Abschaltbar unter
+-- «Konto».
+ALTER TABLE users ADD COLUMN benachrichtigung_eigene_wuensche INTEGER NOT NULL DEFAULT 1;

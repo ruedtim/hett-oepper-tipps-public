@@ -1,0 +1,2090 @@
+/* ---------------------------------------------------------------- Tokens --- */
+
+:root {
+  color-scheme: light dark;
+
+  --bg: #faf7f2;
+  --surface: #ffffff;
+  --surface-sunk: #f2ede4;
+  --ink: #1f1c17;
+  --ink-soft: #6c6459;
+  --line: #e2dacd;
+  --accent: #9c3d2e;
+  --accent-ink: #ffffff;
+  --shadow: 0 1px 2px rgb(31 28 23 / 6%), 0 4px 14px rgb(31 28 23 / 5%);
+  --radius: 14px;
+  --tap: 44px;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #161513;
+    --surface: #201e1b;
+    --surface-sunk: #2a2723;
+    --ink: #f0ebe3;
+    --ink-soft: #a49b8e;
+    --line: #38342e;
+    --accent: #e0765f;
+    --accent-ink: #201e1b;
+    --shadow: 0 1px 2px rgb(0 0 0 / 30%), 0 4px 14px rgb(0 0 0 / 25%);
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--bg);
+  color: var(--ink);
+  font-family: system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  font-size: 16px;
+  line-height: 1.5;
+  /* Randlos bis in die Notch-Bereiche, aber Inhalt nie darunter. */
+  padding: 0 env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+}
+
+.shell {
+  max-width: 44rem;
+  margin: 0 auto;
+  padding: 0 1rem 3rem;
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ------------------------------------------------------------- Kopfzeile --- */
+
+.masthead {
+  padding: 1.5rem 0 0.75rem;
+}
+
+.masthead__row {
+  display: flex;
+  gap: 0.75rem;
+  align-items: flex-start;
+  justify-content: space-between;
+}
+
+.masthead h1 {
+  margin: 0;
+  font-size: clamp(1.6rem, 7vw, 2.1rem);
+  letter-spacing: -0.02em;
+}
+
+/* Sieht aus wie die Überschrift, verhält sich wie ein Knopf. */
+.hometitle {
+  display: block;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.hometitle:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 3px;
+  border-radius: 4px;
+}
+
+/* Derselbe Titel, kleiner: auf jeder Seite ausser der Liste. */
+.pagehead {
+  padding: 1.25rem 0 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+.pagehead .hometitle {
+  color: var(--ink-soft);
+}
+
+.pagehead .hometitle:hover {
+  color: var(--ink);
+}
+
+.masthead__actions {
+  flex: 0 0 auto;
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.2rem;
+}
+
+.pillbutton {
+  flex: 0 0 auto;
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pillbutton:hover {
+  color: var(--ink);
+}
+
+/* Auf schmalen Geräten reicht das Symbol — der Titel braucht die Breite. Seit
+   dem dritten Knopf (Konto) schon unter 40 rem statt 24: Drei beschriftete
+   Pillen drückten den Titel sonst bis weit in die Handy-Querlagen auf mehrere
+   Zeilen. Der Titel wird im selben Zug eine Spur kleiner (6.4vw statt 7vw) —
+   sonst fehlten ihm bei 360–390 px ein paar Pixel zur einen Zeile. */
+@media (max-width: 40rem) {
+  .pillbutton {
+    font-size: 0;
+    padding: 0 0.4rem;
+  }
+  .pillbutton span {
+    font-size: 1rem;
+  }
+  .masthead__actions {
+    gap: 0.3rem;
+  }
+  .masthead h1 {
+    font-size: clamp(1.35rem, 6.4vw, 2.1rem);
+  }
+}
+
+.masthead__sub {
+  margin: 0.15rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+/* Wonach gerade gesucht wird. Bewusst eine eigene, umbrechende Zeile und keine
+   dritte Spalte in .masthead__row — dort schrumpfen die Pillen unter 40 rem
+   schon auf blosse Emoji. */
+.wunschzeile {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem 0.5rem;
+  align-items: center;
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+}
+
+.wunschzeile__label,
+.wunschzeile__leer {
+  color: var(--ink-soft);
+}
+
+.wunschort {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  min-height: 30px;
+  padding: 0 0.6rem;
+  border: 1px solid color-mix(in srgb, var(--accent) 40%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 10%, var(--surface));
+  color: inherit;
+  font: inherit;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
+
+.wunschort__zahl {
+  opacity: 0.65;
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ----------------------------------------------------------- Filterleiste --- */
+
+.filterbar {
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem 0;
+  background: linear-gradient(var(--bg) 82%, transparent);
+  backdrop-filter: blur(6px);
+}
+
+.suchfeld {
+  position: relative;
+}
+
+.suchfeld input {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  /* 16px verhindert, dass iOS beim Fokus in das Feld hineinzoomt. */
+  font-size: 16px;
+  font-family: inherit;
+}
+
+.suchfeld input:focus-visible,
+.filterbar select:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+/* Wie das Personen-Panel: genau so breit wie das Feld darüber, sonst schöbe es
+   auf dem Handy die Seite zur Seite. */
+.suchfeld__liste {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  width: 100%;
+  max-height: 17rem;
+  overflow-y: auto;
+  margin: 0;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  list-style: none;
+}
+
+.suchfeld__zeile {
+  display: grid;
+  gap: 0.1rem;
+  padding: 0.45rem 0.5rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.suchfeld__zeile--aktiv {
+  background: var(--surface-sunk);
+}
+
+.suchfeld__haupt {
+  display: flex;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.suchfeld__label {
+  overflow: hidden;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Das Etikett ist der Kern der Sache — es sagt, WAS beim Klick passiert. Darum
+   steht es rechts an fester Stelle und rutscht nie hinter einen langen Namen. */
+.suchfeld__etikett {
+  flex: none;
+  padding: 0.05rem 0.4rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+}
+
+.suchfeld__zusatz {
+  overflow: hidden;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.suchfeld__volltext {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.filterbar__chips {
+  display: flex;
+  gap: 0.4rem;
+  overflow-x: auto;
+  scrollbar-width: none;
+  /* Damit die Chips beim Scrollen nicht abgeschnitten am Rand kleben. */
+  margin: 0 -1rem;
+  padding: 0.15rem 1rem;
+}
+
+.filterbar__chips::-webkit-scrollbar {
+  display: none;
+}
+
+/* Drei Auswahlfelder passen auf einem Handy nicht nebeneinander — auto-fit
+   legt das dritte von selbst in die nächste Zeile und nutzt auf breiteren
+   Geräten die ganze Breite. */
+.filterbar__selects {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(9rem, 1fr));
+  gap: 0.5rem;
+  /* Jedes Feld hängt an der Oberkante seiner Zeile, nie in der Mitte. */
+  align-items: start;
+}
+
+/* Ein <select> mit Systemaussehen zeichnet Safari in der Höhe des
+   Betriebssystems und ignoriert unsere Vorgabe — neben dem Personen-Knopf, der
+   sich daran hält, hing die Reihe darum schief. Also zeichnen wir den Pfeil
+   selbst; damit sind alle vier Felder gleich hoch, in jedem Browser. */
+/* Nur die Felder der Reihe selbst — die Zeilen im Personen-Panel sind
+   ebenfalls <label> und hätten sonst denselben Pfeil bekommen. */
+.filterbar__selects > label {
+  position: relative;
+  display: block;
+}
+
+.filterbar__selects > label::after {
+  content: '▾';
+  position: absolute;
+  top: 50%;
+  right: 0.6rem;
+  transform: translateY(-50%);
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+  pointer-events: none;
+}
+
+.filterbar select {
+  width: 100%;
+  min-height: var(--tap);
+  height: var(--tap);
+  padding: 0 1.6rem 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font-size: 0.95rem;
+  font-family: inherit;
+  -webkit-appearance: none;
+  appearance: none;
+}
+
+.filterbar select:disabled {
+  opacity: 0.5;
+}
+
+/* --------------------------------------------------------- Personen-Filter --- */
+
+.peoplepick {
+  position: relative;
+}
+
+/* Soll sich in die Reihe der Auswahlfelder einfügen, ohne eines zu sein. */
+.peoplepick__button {
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  min-height: var(--tap);
+  height: var(--tap);
+  padding: 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.95rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.peoplepick__button:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+.peoplepick__button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.peoplepick__label {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Zeigt an, dass hier etwas aufklappt — die Auswahlfelder daneben haben dafür
+   ihren eigenen Pfeil vom Betriebssystem. */
+.peoplepick__button > span:last-child {
+  flex: 0 0 auto;
+  color: var(--ink-soft);
+  font-size: 0.7rem;
+}
+
+.peoplepick__panel {
+  position: absolute;
+  z-index: 20;
+  top: calc(100% + 0.35rem);
+  left: 0;
+  /* Genau so breit wie der Knopf: Ein breiteres Panel stünde in der rechten
+     Spalte über den Seitenrand hinaus und schöbe die Seite zur Seite. */
+  width: 100%;
+  max-height: 15rem;
+  overflow-y: auto;
+  padding: 0.3rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.peoplepick__row {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  min-height: 40px;
+  padding: 0 0.4rem;
+  border-radius: 10px;
+  cursor: pointer;
+}
+
+.peoplepick__row:hover {
+  background: var(--surface-sunk);
+}
+
+.peoplepick__name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.peoplepick__clear {
+  width: 100%;
+  padding: 0.5rem 0.4rem;
+  text-align: left;
+}
+
+.filterbar__footer {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem 1rem;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+}
+
+.toggle {
+  display: inline-flex;
+  gap: 0.4rem;
+  align-items: center;
+  color: var(--ink-soft);
+}
+
+/* ------------------------------------------------------------------ Chips --- */
+
+.chip {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid color-mix(in srgb, var(--chip-color) 45%, transparent);
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--chip-color) 10%, var(--surface));
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.chip[aria-pressed='true'] {
+  background: var(--chip-color);
+  border-color: var(--chip-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+.chip:disabled {
+  opacity: 0.35;
+  cursor: default;
+}
+
+.chip__count {
+  opacity: 0.65;
+  font-size: 0.78em;
+  font-variant-numeric: tabular-nums;
+}
+
+.chip--readonly {
+  min-height: 24px;
+  padding: 0 0.5rem;
+  font-size: 0.78rem;
+  cursor: default;
+}
+
+/* ------------------------------------------------------------------ Liste --- */
+
+.viewbar {
+  display: flex;
+  gap: 0.75rem;
+  /* Oben ausgerichtet statt mittig, seit links ein Block wachsen kann: Der
+     Umschalter soll bei aufgeklapptem Teilen-Link nicht mitwandern. */
+  align-items: flex-start;
+  justify-content: space-between;
+  margin: 0.25rem 0 0.75rem;
+}
+
+/* Zählerzeile und Teilen-Knopf nebeneinander, der Ergebnisblock darunter.
+   `flex-basis: 100%` weiter unten zwingt ihn auf eine eigene Zeile — so bleibt
+   alles ein Container und die Struktur im JSX flach. */
+.viewbar__info {
+  display: flex;
+  flex: 1;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 0.2rem 0.75rem;
+}
+
+.resultcount {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.viewswitch {
+  display: inline-flex;
+  flex: 0 0 auto;
+  padding: 2px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+}
+
+.viewswitch button {
+  min-height: 32px;
+  padding: 0 0.8rem;
+  border: 0;
+  border-radius: 999px;
+  background: none;
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+.viewswitch button[aria-pressed='true'] {
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+/* --------------------------------------------------- Link einfügen --- */
+
+.paste {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.8rem 0.9rem;
+  border: 1px dashed var(--line);
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--surface) 60%, transparent);
+}
+
+.paste__row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.75rem;
+  align-items: center;
+}
+
+.paste__info {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+/* ----------------------------------------------------------- Ortswahl --- */
+
+.coordrow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.25rem 0.9rem;
+  align-items: center;
+}
+
+.coordrow__value {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.88rem;
+}
+
+.picker {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  grid-template-rows: auto 1fr auto;
+  background: var(--bg);
+  /* Auf dem iPhone reicht der Bildschirm unter die Systemleisten. */
+  padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom)
+    env(safe-area-inset-left);
+}
+
+.picker--loading {
+  display: grid;
+  place-items: center;
+  color: var(--ink-soft);
+}
+
+.picker__search {
+  display: flex;
+  gap: 0.5rem;
+  padding: 0.75rem;
+}
+
+.picker__search input {
+  flex: 1;
+  min-height: var(--tap);
+  padding: 0 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.picker__results {
+  position: absolute;
+  top: calc(var(--tap) + 1.5rem);
+  left: 0.75rem;
+  right: 0.75rem;
+  z-index: 20;
+  max-height: 50vh;
+  margin: 0;
+  padding: 0;
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: 0 8px 28px rgb(0 0 0 / 22%);
+  list-style: none;
+  overflow-y: auto;
+}
+
+.picker__results button {
+  display: block;
+  width: 100%;
+  padding: 0.7rem 0.9rem;
+  border: 0;
+  border-bottom: 1px solid var(--line);
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Bezugsrahmen für das Fadenkreuz: Es muss auf die Mitte der KARTE zeigen,
+   nicht auf die Mitte des Overlays — dazwischen liegen Such- und Fussleiste. */
+.picker__mapwrap {
+  position: relative;
+  min-height: 0;
+}
+
+/* Diese zwei Zeilen sind kein Schmuck, sondern der Grund, warum man das
+   Fadenkreuz überhaupt sieht: Leaflet gibt seinen Ebenen z-index 200 bis 800
+   und dem Container selbst nur `position: relative`. Ohne eigenen
+   Stapelkontext malen diese Ebenen über alles, was im Overlay eine kleinere
+   Zahl trägt — das Fadenkreuz mit seiner 15 eingeschlossen. `position` steht
+   ausdrücklich mit dabei, statt sich darauf zu verlassen, dass Leaflet es zur
+   Laufzeit selbst setzt (`.mapview` weiter unten tut genau das und kommt
+   deshalb mit `z-index: 0` allein aus). */
+.picker__map {
+  position: relative;
+  z-index: 0;
+  height: 100%;
+  background: var(--surface-sunk);
+}
+
+/* Die Spitze des Pins markiert die Stelle, deshalb wird er um seine volle
+   Höhe nach oben versetzt. */
+.picker__cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  z-index: 15;
+  transform: translate(-50%, -100%);
+  pointer-events: none;
+  filter: drop-shadow(0 2px 4px rgb(0 0 0 / 30%));
+}
+
+.picker__bar {
+  display: grid;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  background: var(--surface);
+  box-shadow: 0 -4px 16px rgb(0 0 0 / 10%);
+}
+
+.picker__coords {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.picker__coords input {
+  width: 8.5rem;
+  min-height: 38px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: inherit;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 16px;
+}
+
+.picker__actions {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.picker__actions .button {
+  flex: 1;
+  justify-content: center;
+}
+
+.picker__error {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.85rem;
+}
+
+/* Kein Fehler, sondern eine Auskunft: Woher der Punkt kommt, den man gerade
+   sieht. Deshalb gedeckt und nicht in der Warnfarbe. */
+.picker__hint {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+/* --------------------------------------------------------------- Karte --- */
+
+/* Ohne feste Höhe ist der Leaflet-Container 0 px hoch und die Karte unsichtbar —
+   der häufigste Fehler mit dieser Bibliothek. */
+.mapview {
+  height: min(70vh, 34rem);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface-sunk);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+  z-index: 0;
+}
+
+.mapnote {
+  margin: 0.75rem 0 0;
+  padding: 0.7rem 0.85rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #c99a1e 15%, transparent);
+  font-size: 0.85rem;
+}
+
+.mapnote .linkbutton {
+  padding: 0;
+  font-size: inherit;
+}
+
+/* Der Pin ist ein Inline-SVG statt eines Bildes: Leaflets Standard-Icons brechen
+   unter Vite, und so lässt sich die Kategoriefarbe ohne eigene Datei setzen. */
+.pin {
+  background: none;
+  border: 0;
+}
+
+.mappop__by,
+.mappop__cats {
+  color: #6c6459;
+  font-size: 0.82rem;
+}
+
+.mappop__open {
+  margin-top: 0.5rem;
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  background: var(--accent);
+  color: #fff;
+  font: inherit;
+  font-size: 0.82rem;
+  cursor: pointer;
+}
+
+/* Leaflet bringt eigene Farben mit; im Dunkelmodus wären Popup und Bedienelemente
+   sonst grell weiss. */
+@media (prefers-color-scheme: dark) {
+  .leaflet-popup-content-wrapper,
+  .leaflet-popup-tip,
+  .leaflet-control-zoom a,
+  .leaflet-control-attribution {
+    background: var(--surface) !important;
+    color: var(--ink) !important;
+  }
+
+  .leaflet-control-attribution a {
+    color: var(--accent) !important;
+  }
+
+  /* Die Kacheln selbst sind hell — leicht abdunkeln, damit sie nicht blenden. */
+  .leaflet-tile-pane {
+    filter: brightness(0.82) contrast(1.05);
+  }
+}
+
+.cards {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.card {
+  /* Bezugsrahmen für den Klickbereich, der als ::after darüberliegt. */
+  position: relative;
+  /* Die Kante schliesst das Foto sichtbar in SEINE Kachel ein — randlos am
+     unteren Rand las es sich sonst als Titelbild der nächsten. Denselben Rand
+     tragen alle Kachel-Flächen (Wünsche, Notizen, Kategorien, Verlauf, Karte),
+     damit die Tippliste nicht anders aussieht als der Rest. */
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+  overflow: hidden;
+}
+
+.card--closed {
+  opacity: 0.62;
+}
+
+/* Die ganze Karte ist der Klickbereich — auf dem Handy trifft man sonst
+   daneben. Der Knopf umschliesst sie aber nicht, sondern hängt am Namen und
+   deckt sie mit einem ::after zu: Der Ort eine Zeile tiefer ist selbst ein
+   Knopf, und ein Knopf im Knopf ist nicht erlaubt. So bleibt der Name die
+   Beschriftung des Knopfes — und alles, was selbst anklickbar ist, braucht
+   bloss einen höheren z-index als diese Decke. */
+.card__hit {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.card__hit::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+}
+
+/* Der Rahmen liegt um den Namen, nicht um die Kachel: Das ::after ist bloss
+   eine Fläche ohne eigenen Rand, und der Knopf selbst ist der Name. */
+.card__hit:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+.card__photo {
+  display: block;
+  width: 100%;
+  height: 9rem;
+  object-fit: cover;
+}
+
+.card__body {
+  padding: 0.85rem 0.95rem 0.95rem;
+}
+
+.card__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 1.05rem;
+  line-height: 1.3;
+}
+
+.card__where {
+  margin: 0.1rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.card__country::before {
+  content: ' · ';
+}
+
+/* Ein Stück Text, das die Liste auf sich selbst filtert (#32): Ort, Land, und
+   in der Kachel auch die Namen. Darum heisst die Klasse nach der Wirkung und
+   nicht nach dem Feld. Sie erbt Schrift und Farbe der Zeile, in der sie steht —
+   in der Kachel eine kleine graue, im Tipp die normale: Sie soll die Zeile
+   nicht zerreissen, sondern nur zeigen, dass man sie anfassen kann. Der z-index
+   hebt sie über die Klickdecke der Kachel, die sie sonst abfinge. */
+.filterlink {
+  position: relative;
+  z-index: 2;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+  cursor: pointer;
+}
+
+.filterlink:hover {
+  color: var(--accent);
+}
+
+.filterlink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+  border-radius: 2px;
+}
+
+/* Ein Link nach draussen, mitten im Fliesstext — bewusst NICHT .filterlink:
+   die heisst nach ihrer Wirkung («filtert die Liste auf sich selbst»), und ein
+   Verweis auf GitHub unter diesem Namen machte den Kommentar dort zur Lüge.
+   Farbe erbt er trotzdem, damit er den Absatz nicht zerreisst. */
+.textlink {
+  color: inherit;
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 0.2em;
+}
+
+.textlink:hover {
+  color: var(--accent);
+}
+
+.textlink:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 2px;
+}
+
+.card__text {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+}
+
+.card__meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.75rem;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: 0.7rem;
+}
+
+.card__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.card__by {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.badge {
+  padding: 0.1rem 0.45rem;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.badge--closed {
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+}
+
+.badge--erfuellt {
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+}
+
+/* «ganzes Land» — sagt, dass hier kein Ort fehlt, sondern keiner gemeint ist. */
+.badge--land {
+  background: var(--surface-sunk);
+  color: var(--ink-soft);
+}
+
+/* ----------------------------------------------------------------- Wünsche --- */
+
+.wunschliste {
+  display: grid;
+  gap: 1rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wunsch {
+  padding: 0.85rem 0.95rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Erfüllt heisst nicht weg: Die Autorin soll sehen, dass jemand — womöglich ein
+   Admin — ihren Wunsch geschlossen hat, und es zurücknehmen können. */
+.wunsch--erfuellt {
+  opacity: 0.62;
+}
+
+.wunsch__kopf {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+}
+
+.wunsch__ort {
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.wunsch__land {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  font-weight: 400;
+}
+
+.wunsch__bis {
+  margin: 0.1rem 0 0.5rem;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.wunsch__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.wunsch__text {
+  margin: 0.5rem 0 0;
+  font-size: 0.92rem;
+  white-space: pre-wrap;
+}
+
+.wunsch__meta {
+  margin: 0.6rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.wunsch__aktionen {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 0.9rem;
+  align-items: center;
+  margin-top: 0.7rem;
+}
+
+/* Die zugeordneten Tipps — bei einem Regionswunsch («Thurgau») die einzige
+   Antwort, die überhaupt zustande kommt. */
+.wunsch__treffer {
+  margin-top: 0.7rem;
+  padding: 0.55rem 0.7rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface-sunk);
+}
+
+.wunsch__treffer-titel {
+  display: block;
+  margin-bottom: 0.25rem;
+  color: var(--ink-soft);
+  font-size: 0.72rem;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.wunsch__treffer ul {
+  display: grid;
+  gap: 0.3rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wunsch__treffer li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.15rem 0.5rem;
+  align-items: baseline;
+}
+
+.wunsch__treffer-ort {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+/* Verrät sich erst beim Hinschauen: Eine Zuordnung zu lösen ist selten und
+   soll nicht so laut sein wie der Weg zum Tipp. */
+.wunsch__loesen {
+  margin-left: auto;
+  font-size: 0.78rem;
+  opacity: 0.7;
+}
+
+.wunsch__suche {
+  display: grid;
+  gap: 0.5rem;
+  margin-top: 0.7rem;
+  padding-top: 0.7rem;
+  border-top: 1px solid var(--line);
+}
+
+.wunsch__vorschlaege {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.wunsch__vorschlag {
+  display: grid;
+  gap: 0.1rem;
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.wunsch__vorschlag span {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.wunsch__vorschlag:disabled {
+  opacity: 0.5;
+  cursor: default;
+}
+
+/* Auswahl im Tipp-Formular: «Antwort auf einen Wunsch?».
+   Geometrie eins zu eins von .chip — die Kategorien-Chips stehen im selben
+   Formular, und zwei fast gleiche Pillen nebeneinander fallen unangenehm auf.
+   Unausgewählt bewusst ohne Akzentfarbe (nur `--line`/`--surface`): Sonst
+   sieht die Pille schon angewählt aus, bevor man sie berührt hat. Die
+   Akzentfarbe bleibt allein dem gedrückten Zustand vorbehalten.
+   `align-items: center` statt `baseline`, sonst zieht das kleinere «von …»
+   die ganze Zeile an den oberen Rand. */
+.wunschwahl {
+  display: inline-flex;
+  gap: 0.35rem;
+  align-items: center;
+  flex: 0 0 auto;
+  min-height: 36px;
+  padding: 0 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  font-size: 0.88rem;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.wunschwahl[aria-pressed='true'] {
+  border-color: color-mix(in srgb, var(--accent) 45%, transparent);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font-weight: 600;
+}
+
+.wunschwahl__von {
+  font-size: 0.78em;
+  opacity: 0.7;
+}
+
+/* ------------------------------------------------------------ Detailseite --- */
+
+.detail__bar {
+  padding: 1rem 0 0.5rem;
+}
+
+.detail__head h1 {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: clamp(1.4rem, 6vw, 1.8rem);
+  letter-spacing: -0.01em;
+}
+
+.detail__where {
+  margin: 0.2rem 0 0.6rem;
+  color: var(--ink-soft);
+}
+
+.detail__cats {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+}
+
+.detail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin: 1rem 0 0.5rem;
+}
+
+.detail__added {
+  margin: 1.25rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.detail__address {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+/* «Eingetragen für Tims Wunsch nach Dolomiten» — verschwindet mit dem Ablauf
+   des Wunsches von selbst. */
+.detail__wunsch {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.3rem;
+  align-items: baseline;
+  margin: 0.7rem 0 0;
+  padding: 0.5rem 0.7rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: color-mix(in srgb, var(--accent) 8%, var(--surface-sunk));
+  font-size: 0.88rem;
+}
+
+.detail__wunsch-bis {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+.notes {
+  display: grid;
+  gap: 1rem;
+  margin-top: 1.25rem;
+}
+
+.note {
+  padding: 0.9rem 1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.note__head {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: baseline;
+  justify-content: space-between;
+}
+
+.note__date {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.note__text {
+  margin: 0.4rem 0 0;
+  white-space: pre-wrap;
+}
+
+.note__photo {
+  display: block;
+  width: 100%;
+  margin-top: 0.75rem;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+/* ---------------------------------------------------------------- Knöpfe --- */
+
+.button {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--tap);
+  padding: 0 1.1rem;
+  border: 1px solid var(--accent);
+  border-radius: var(--radius);
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 0.95rem;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.button--ghost {
+  background: none;
+  color: var(--accent);
+}
+
+.linkbutton {
+  padding: 0.35rem 0;
+  border: 0;
+  background: none;
+  color: var(--accent);
+  font: inherit;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+/* ------------------------------------------------------------- Formulare --- */
+
+.form {
+  display: grid;
+  gap: 1rem;
+  padding-bottom: 2rem;
+}
+
+.form__title {
+  margin: 0;
+  font-size: clamp(1.4rem, 6vw, 1.8rem);
+  letter-spacing: -0.01em;
+}
+
+.form__context {
+  margin: -0.75rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.9rem;
+}
+
+.infos__part p {
+  margin: 0.35rem 0 0;
+  color: var(--ink-soft);
+}
+
+.infos__title {
+  margin: 0;
+  font-size: 1.1rem;
+  letter-spacing: -0.01em;
+}
+
+.infos__list {
+  margin: 0.35rem 0 0;
+  padding-left: 1.1rem;
+  color: var(--ink-soft);
+}
+
+.infos__list li + li {
+  margin-top: 0.4rem;
+}
+
+/* Der fette Anfang ist die Sprungmarke beim Überfliegen — in der Textfarbe,
+   damit er sich abhebt, ohne dass die Liste gescheckt aussieht. */
+.infos__list strong {
+  color: var(--ink);
+}
+
+.field {
+  display: grid;
+  gap: 0.35rem;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.field > span,
+.field > legend,
+.field__label {
+  padding: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.field em {
+  font-weight: 400;
+  font-style: normal;
+  text-transform: none;
+  letter-spacing: 0;
+  opacity: 0.75;
+}
+
+.field input,
+.field select,
+.field textarea {
+  width: 100%;
+  min-height: var(--tap);
+  padding: 0.6rem 0.9rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  color: inherit;
+  font: inherit;
+  /* 16px, sonst zoomt iOS beim Fokus in das Feld hinein. */
+  font-size: 16px;
+}
+
+.field textarea {
+  min-height: 8rem;
+  resize: vertical;
+  line-height: 1.55;
+}
+
+/* Das erste Datumsfeld der App: Safari zeichnet es sonst niedriger als die
+   übrigen Felder und ignoriert die Höhe von oben. Kein `appearance: none` —
+   das nähme Safari den Kalenderknopf. */
+.field input[type='date'] {
+  min-height: var(--tap);
+  line-height: normal;
+}
+
+.field input:focus-visible,
+.field select:focus-visible,
+.field textarea:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+.field__hint {
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+.field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.form__chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+}
+
+.toggle--block {
+  padding: 0.5rem 0;
+  color: inherit;
+}
+
+/* Der eigene Beitrag im Korrektur-Formular. Abgesetzt, weil hier nicht mehr
+   der Ort bearbeitet wird, sondern der eigene Text — und weil das die einzige
+   Stelle ist, an der ein Beitrag nachträglich änderbar ist. */
+.ownnotes {
+  display: grid;
+  gap: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+.ownnotes__title {
+  margin: 0;
+  font-size: 1.05rem;
+  letter-spacing: -0.01em;
+}
+
+/* Steht nur da, wenn ein Admin gerade fremde Beiträge vor sich hat — deshalb
+   deutlich genug, um gelesen zu werden, ohne wie ein Fehler auszusehen. */
+.ownnotes__hint {
+  margin: -0.6rem 0 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: color-mix(in srgb, #c99a1e 15%, transparent);
+  font-size: 0.85rem;
+}
+
+.ownnote {
+  display: grid;
+  gap: 1rem;
+}
+
+.photo-preview {
+  display: flex;
+  gap: 0.75rem;
+  align-items: center;
+}
+
+.photo-preview img {
+  width: 5rem;
+  height: 5rem;
+  border-radius: calc(var(--radius) - 4px);
+  object-fit: cover;
+}
+
+.photo-preview p {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+}
+
+.form__error {
+  margin: 0;
+  padding: 0.75rem 0.9rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, var(--accent) 12%, transparent);
+  color: var(--accent);
+  font-size: 0.9rem;
+}
+
+.form__actions .button {
+  width: 100%;
+  justify-content: center;
+}
+
+.form__note {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.82rem;
+  text-align: center;
+}
+
+.detail__foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
+  margin: 1.5rem 0 0;
+  padding-top: 1.25rem;
+  border-top: 1px solid var(--line);
+}
+
+/* Zurückhaltender als die anderen beiden — nichts, was man versehentlich trifft. */
+.detail__remove {
+  margin-left: auto;
+  color: var(--ink-soft);
+}
+
+.detail__remove:hover {
+  color: var(--accent);
+}
+
+.choices {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.choice {
+  display: flex;
+  gap: 0.7rem;
+  align-items: flex-start;
+  padding: 0.85rem 0.95rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  cursor: pointer;
+}
+
+.choice--on {
+  border-color: var(--accent);
+  box-shadow: inset 0 0 0 1px var(--accent);
+}
+
+.choice input {
+  flex: 0 0 auto;
+  width: 1.15rem;
+  height: 1.15rem;
+  margin-top: 0.15rem;
+  accent-color: var(--accent);
+}
+
+.choice span {
+  display: grid;
+  gap: 0.2rem;
+}
+
+.choice small {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  line-height: 1.45;
+}
+
+/* Schwebt über der Liste, damit «Tipp hinzufügen» immer in Daumenreichweite ist. */
+.fab {
+  position: sticky;
+  bottom: 1rem;
+  z-index: 5;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  min-height: 52px;
+  margin-top: 1.25rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--accent);
+  color: var(--accent-ink);
+  font: inherit;
+  font-size: 1rem;
+  font-weight: 600;
+  box-shadow: 0 4px 16px rgb(0 0 0 / 18%);
+  cursor: pointer;
+}
+
+.thanks {
+  display: grid;
+  gap: 0.75rem;
+  justify-items: center;
+  padding: 4rem 0;
+  text-align: center;
+}
+
+.thanks__mark {
+  display: grid;
+  place-items: center;
+  width: 3.5rem;
+  height: 3.5rem;
+  margin: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--accent) 15%, transparent);
+  color: var(--accent);
+  font-size: 1.75rem;
+}
+
+.thanks h1 {
+  margin: 0;
+  font-size: 1.6rem;
+}
+
+.thanks p {
+  max-width: 24rem;
+  margin: 0;
+  color: var(--ink-soft);
+}
+
+/* Die Admin-Wege oben auf der Konto-Seite — eine Zeile, die auf dem Handy
+   umbricht, statt aus dem Bild zu laufen. */
+.adminlinks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  margin: 0.75rem 0 0.25rem;
+}
+
+.sitefoot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 1rem;
+  justify-content: center;
+  margin-top: 1.5rem;
+  opacity: 0.55;
+}
+
+.catrow {
+  display: grid;
+  grid-template-columns: 2rem 3rem 1fr 3rem;
+  gap: 0.4rem 0.5rem;
+  align-items: center;
+  padding: 0.6rem 0.7rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+/* Die Pfeile stehen links neben beiden Reihen der Zeile und teilen sich deren
+   Höhe: Schmal sind sie ohnehin, kurz sollen sie nicht auch noch sein. */
+.catrow__sort {
+  display: grid;
+  grid-row: 1 / 3;
+  grid-template-rows: 1fr 1fr;
+  gap: 0.25rem;
+  align-self: stretch;
+}
+
+.catrow__sort button {
+  padding: 0;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--bg);
+  color: var(--ink-soft);
+  font: inherit;
+  font-size: 0.8rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.catrow__sort button:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.catrow input {
+  /* Ein Eingabefeld bringt eine eigene Wunschbreite mit (rund 186 px), und die
+     ist im Raster eine Untergrenze: Mit der zusätzlichen Pfeilspalte schob sie
+     auf einem schmalen Handy die ganze Seite 10 px nach rechts hinaus. */
+  min-width: 0;
+  min-height: 40px;
+  padding: 0 0.5rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  font-size: 16px;
+}
+
+.catrow input:disabled {
+  opacity: 0.55;
+}
+
+.catrow__emoji {
+  text-align: center;
+}
+
+.catrow__color {
+  padding: 0.15rem;
+  cursor: pointer;
+}
+
+.catrow__id {
+  grid-column: 2 / 4;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85rem !important;
+}
+
+.catrow__active {
+  display: inline-flex;
+  gap: 0.3rem;
+  align-items: center;
+  justify-content: flex-end;
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+}
+
+/* ---------------------------------------------------------- Freigabe --- */
+
+.admin {
+  display: grid;
+  gap: 0.9rem;
+  padding-bottom: 3rem;
+}
+
+/* Der Umschalter steht hier allein im Raster — ohne das zöge er sich über die
+   ganze Breite und die zwei Knöpfe klebten links in einer leeren Pille. */
+.admin > .viewswitch {
+  justify-self: start;
+}
+
+.admin__done {
+  margin: 0;
+  padding: 0.7rem 0.9rem;
+  border-radius: var(--radius);
+  background: color-mix(in srgb, #4d8f68 15%, transparent);
+  color: #2f6b47;
+  font-size: 0.9rem;
+}
+
+@media (prefers-color-scheme: dark) {
+  .admin__done {
+    color: #8fd0a8;
+  }
+}
+
+.pending {
+  display: grid;
+  gap: 0.5rem;
+  padding: 0.95rem 1rem 1.1rem;
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--surface);
+  box-shadow: var(--shadow);
+}
+
+.pending__head {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.pending__kind {
+  padding: 0.15rem 0.5rem;
+  border-radius: 999px;
+  background: var(--surface-sunk);
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  white-space: nowrap;
+}
+
+.pending__kind--tipp {
+  background: color-mix(in srgb, #c1553b 18%, transparent);
+}
+
+.pending__kind--ergaenzung {
+  background: color-mix(in srgb, #4d8f68 18%, transparent);
+}
+
+.pending__kind--korrektur {
+  background: color-mix(in srgb, #3f6f9e 18%, transparent);
+}
+
+/* Als einziges Etikett voll durchgefärbt: Eine Löschung soll beim Überfliegen
+   ins Auge springen — sie ist die einzige Handlung, nach der etwas fehlt. */
+.pending__kind--loeschung {
+  background: #b3261e;
+  color: #fff;
+}
+
+.pending__kind--rueckgaengig {
+  background: color-mix(in srgb, #6f5f9e 18%, transparent);
+}
+
+.pending__kind--kategorien {
+  background: color-mix(in srgb, #c99a1e 20%, transparent);
+}
+
+.pending__link {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  text-decoration: none;
+}
+
+.pending__title {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem;
+  align-items: baseline;
+  margin: 0;
+  font-size: 1.05rem;
+}
+
+.pending__where,
+.pending__meta {
+  margin: 0;
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+  overflow-wrap: anywhere;
+}
+
+.pending__note {
+  margin: 0.25rem 0 0;
+  padding: 0.1rem 0 0.1rem 0.85rem;
+  border-left: 3px solid var(--line);
+}
+
+.pending__note p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
+.pending__note cite {
+  color: var(--ink-soft);
+  font-size: 0.8rem;
+  font-style: normal;
+}
+
+.pending__photo {
+  display: block;
+  width: 100%;
+  border-radius: calc(var(--radius) - 4px);
+}
+
+.pending__warn,
+.pending__unreadable {
+  margin: 0;
+  padding: 0.6rem 0.8rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: color-mix(in srgb, #c99a1e 18%, transparent);
+  font-size: 0.85rem;
+}
+
+.chip--unknown {
+  --chip-color: #8a8a8a;
+}
+
+.pending--done {
+  opacity: 0.55;
+}
+
+.history__files {
+  display: grid;
+  gap: 0.2rem;
+  margin: 0.25rem 0 0;
+  padding: 0.6rem 0.75rem;
+  border-radius: calc(var(--radius) - 4px);
+  background: var(--surface-sunk);
+  list-style: none;
+  font-size: 0.8rem;
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  overflow-wrap: anywhere;
+}
+
+.history__status {
+  display: inline-block;
+  min-width: 4.5rem;
+  color: var(--ink-soft);
+}
+
+.history__pager {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 0.5rem;
+}
+
+.history__page {
+  color: var(--ink-soft);
+  font-size: 0.85rem;
+}
+
+.linkbutton:disabled {
+  opacity: 0.4;
+  cursor: default;
+}
+
+.pending__actions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.pending__actions .button {
+  flex: 1;
+  justify-content: center;
+}
+
+/* --------------------------------------------------------------- Zustände --- */
+
+.status,
+.empty {
+  padding: 2rem 0;
+  color: var(--ink-soft);
+  text-align: center;
+}
+
+.status--error {
+  color: var(--accent);
+}
+
+.empty {
+  display: grid;
+  gap: 1rem;
+  justify-items: center;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .card__hit,
+  .chip,
+  .button {
+    transition: background-color 120ms ease, opacity 120ms ease;
+  }
+}
+
+/* ------------------------------------------------------- Geteilte Listen --- */
+
+/* Der frisch erzeugte Link, direkt unter der Ergebniszeile. */
+.teilenlink {
+  flex-basis: 100%;
+  margin: 0.35rem 0 0;
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.teilenlink__titel {
+  margin: 0 0 0.45rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.teilenlink__zeile {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.teilenlink__url {
+  flex: 1;
+  min-width: 12rem;
+  min-height: 40px;
+  padding: 0 0.6rem;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--bg);
+  color: inherit;
+  font: inherit;
+  /* 16px, sonst zoomt iOS beim Fokus in das Feld hinein. */
+  font-size: 16px;
+}
+
+.teilenlink__hinweis {
+  margin: 0.5rem 0 0;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}
+
+/* Die Übersicht auf der Konto-Seite. */
+.geteilt {
+  margin: 0 0 1rem;
+  padding: 0;
+  list-style: none;
+  display: grid;
+  gap: 0.6rem;
+}
+
+.geteilt__eintrag {
+  padding: 0.7rem 0.8rem;
+  border: 1px solid var(--line);
+  border-radius: 14px;
+  background: var(--surface);
+}
+
+.geteilt__meta {
+  margin: 0.4rem 0 0.2rem;
+  color: var(--ink-soft);
+  font-size: 0.78rem;
+}

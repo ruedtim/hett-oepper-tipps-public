@@ -1,0 +1,23 @@
+-- Anzeigenamen werden änderbar.
+--
+-- Bisher WAR der Name die Identität: `users.name_key` ist der Login-Schlüssel,
+-- und jede Besitzprüfung (eigene Beschreibung korrigieren, Tipp löschen, Wunsch
+-- schliessen) vergleicht `searchKey` des aktuellen Namens gegen die Namen, die
+-- in den Daten stehen (`notes.by`, `wuensche.von_key`). Eine Umbenennung hätte
+-- damit stillschweigend Besitz zerstört — und der frei gewordene Name hätte ihn
+-- dem Nächsten geschenkt, der ihn nimmt.
+--
+-- Diese Spalte merkt sich die früheren Schlüssel eines Kontos. Daraus folgt
+-- beides: Besitz bleibt (geprüft wird gegen die Menge aller Schlüssel, nicht
+-- gegen einen), und der alte Name bleibt belegt (Anlegen und Umbenennen prüfen
+-- gegen diese Spalte mit).
+--
+-- Eine Spalte auf `users` und keine neue Tabelle, aus demselben Grund wie beim
+-- Gäste-Zugang: `users` steht ohnehin nicht im Backup-Spiegel — eine eigene
+-- Tabelle wäre dort die dritte stillschweigende Lücke, so ist es dieselbe.
+--
+-- JSON-Array statt einer n:1-Tabelle, weil D1/SQLite `json_each` mitbringt und
+-- die Liste pro Konto aus einer Handvoll Einträgen besteht; dieselbe Wahl wie
+-- bei `tips.categories`. Additiv mit DEFAULT: Alter Code läuft auf dem neuen
+-- Schema unverändert weiter.
+ALTER TABLE users ADD COLUMN alte_name_keys TEXT NOT NULL DEFAULT '[]';

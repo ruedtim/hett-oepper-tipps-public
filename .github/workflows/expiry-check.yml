@@ -1,0 +1,42 @@
+name: Ablaufdaten prüfen
+
+on:
+  schedule:
+    # Montags um 08:00 UTC. Geplante Workflows werden in privaten Repos nicht
+    # nach 60 Tagen Inaktivität abgeschaltet — das passiert nur öffentlichen.
+    - cron: '0 8 * * 1'
+  workflow_dispatch:
+
+permissions:
+  issues: write
+  contents: read
+
+jobs:
+  check:
+    # Läuft nur im privaten Repo — im öffentlichen Spiegel fehlt
+    # ops/expiries.json, und die Zugangsdaten gehen dort niemanden etwas an.
+    if: github.repository == 'ruedtim/hett-oepper-tipps'
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+
+      - name: Bald ablaufende Zugänge suchen
+        id: check
+        run: node scripts/check-expiries.mjs >> "$GITHUB_OUTPUT"
+
+      - name: Issue öffnen
+        if: steps.check.outputs.warn == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          BODY: ${{ steps.check.outputs.body }}
+        run: |
+          # Kein zweites Issue, wenn schon eins offen ist.
+          if [ -n "$(gh issue list --label zugang --state open --json number --jq '.[0].number')" ]; then
+            echo "Es ist bereits ein Issue offen."
+            exit 0
+          fi
+          gh label create zugang --color B60205 --description "Zugangsdaten laufen ab" 2>/dev/null || true
+          gh issue create \
+            --title "Zugang läuft bald ab" \
+            --label zugang \
+            --body "$BODY"

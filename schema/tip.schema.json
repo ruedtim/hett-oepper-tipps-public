@@ -1,0 +1,52 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "tip.schema.json",
+  "title": "Tipp (Stammdaten)",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schema", "id", "name", "country", "place", "categories", "added"],
+  "properties": {
+    "schema": {
+      "type": "integer",
+      "const": 1,
+      "description": "Schemaversion. Erhöhen, wenn sich die Struktur ändert."
+    },
+    "id": {
+      "type": "string",
+      "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$",
+      "minLength": 3,
+      "maxLength": 80,
+      "description": "Unveränderlich und identisch mit dem Ordnernamen. Nie umbenennen — geteilte Links brechen sonst."
+    },
+    "name": { "type": "string", "minLength": 1, "maxLength": 120 },
+    "country": {
+      "type": "string",
+      "pattern": "^[A-Z]{2}$",
+      "description": "ISO 3166-1 alpha-2, grossgeschrieben."
+    },
+    "place": { "type": "string", "minLength": 1, "maxLength": 80 },
+    "categories": {
+      "type": "array",
+      "minItems": 1,
+      "maxItems": 5,
+      "uniqueItems": true,
+      "items": { "type": "string", "pattern": "^[a-z0-9]+(-[a-z0-9]+)*$" }
+    },
+    "address": { "type": "string", "maxLength": 200 },
+    "link": { "type": "string", "format": "uri", "maxLength": 500 },
+    "coords": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["lat", "lng"],
+      "properties": {
+        "lat": { "type": "number", "minimum": -90, "maximum": 90 },
+        "lng": { "type": "number", "minimum": -180, "maximum": 180 }
+      }
+    },
+    "closed": {
+      "type": "boolean",
+      "description": "«Gibt's nicht mehr». Wird ausgegraut angezeigt statt gelöscht, damit die Notizen erhalten bleiben."
+    },
+    "added": { "type": "string", "format": "date" }
+  }
+}

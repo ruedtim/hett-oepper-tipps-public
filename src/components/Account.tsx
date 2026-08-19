@@ -322,9 +322,8 @@ export default function Account({ me, onClose, onChanged, onVerlauf, onKategorie
 
           <h2 className="form__title">E-Mail</h2>
           <p className="form__context">
-            Freiwillig. Mit einer bestätigten Adresse kannst du dich auch damit anmelden (das
-            hilft, weil der Name änderbar ist), ein vergessenes Passwort selbst zurücksetzen und
-            dich benachrichtigen lassen. Ohne Adresse funktioniert alles wie bisher.
+            Freiwillig. Mit einer bestätigten Adresse kannst du dich auch damit anmelden, ein vergessenes Passwort selbst zurücksetzen und
+            dich benachrichtigen lassen.
           </p>
 
           {me?.email && (
@@ -469,9 +468,8 @@ export default function Account({ me, onClose, onChanged, onVerlauf, onKategorie
           <h2 className="form__title">Einladungen</h2>
           <p className="form__context">
             Hol jemanden in die Runde: Ein Einladungslink lässt eine Person sich selbst ein
-            Konto anlegen — mit Namen, E-Mail und eigenem Passwort. Jeder Link gilt einmal
-            und 90 Tage; jedes Konto hat drei, Widerrufen gibt keinen zurück. Sind sie
-            aufgebraucht, kannst du bei den Admins neue bestellen.
+            Konto anlegen. Jeder Link gilt einmal
+            und 90 Tage; jedes Konto hat drei Einladungslinks. Falls das nicht reicht, kann man zusätzliche anfordern.
           </p>
 
           {einladungError && (
